@@ -3,366 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SANSKARDHAM VISION V2.0</title>
+    <title>Sanskardham Hospital | Vision v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f8faff; overflow-x: hidden; }
-        .vision-blue { background: linear-gradient(180deg, #1e40af 0%, #3b82f6 100%); }
-        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
-        .login-btn { background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%); }
-        
-        /* Custom Toast (No Browser Alerts) */
-        #customToast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 15px; padding: 16px; position: fixed; z-index: 1000; left: 50%; bottom: 100px; transform: translateX(-50%); font-weight: bold; font-size: 12px; }
-        #customToast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 100px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 100px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
-        /* WhatsApp Style for Notice Board */
-        .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-        .msg-bubble { max-width: 80%; padding: 10px; border-radius: 12px; margin-bottom: 8px; position: relative; font-size: 13px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg-admin { background: #dcf8c6; align-self: flex-start; border-top-left-radius: 0; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; }
+        .gradient-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
+        .btn-active:active { transform: scale(0.95); transition: 0.1s; }
+        .main-card { transition: all 0.3s ease; border: 1px solid #e2e8f0; height: 110px; }
+        .modal-anim { animation: zoomIn 0.2s ease-out; }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
 
-<div id="customToast">સંદેશ અહીં આવશે</div>
-
-<div class="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden bg-white shadow-2xl">
-
-    <div id="loginPage" class="absolute inset-0 z-[100] bg-white flex flex-col items-center justify-center p-8 transition-all duration-500">
-        <img src="https://cdn-icons-png.flaticon.com/512/3063/3063176.png" class="w-24 mb-6" alt="Hospital">
-        <h2 class="text-3xl font-black text-slate-800 mb-2 tracking-tight">Staff Login</h2>
-        <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-12">Sanskardham Vision</p>
-        
-        <div class="w-full space-y-4">
-            <input type="text" id="loginID" placeholder="User ID" class="w-full p-4 rounded-2xl bg-gray-100 border-none outline-none text-center font-bold text-gray-600 focus:ring-2 focus:ring-blue-400">
-            <input type="password" id="loginPass" placeholder="Password" class="w-full p-4 rounded-2xl bg-gray-100 border-none outline-none text-center font-bold text-gray-600 focus:ring-2 focus:ring-blue-400">
-            <button onclick="checkLoginProcess()" class="w-full login-btn text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all tracking-widest">LOGIN</button>
+<div class="max-w-md mx-auto min-h-screen flex flex-col bg-white relative shadow-2xl overflow-x-hidden">
+    
+    <header class="gradient-header text-white p-5 rounded-b-[35px] shadow-lg sticky top-0 z-50">
+        <div class="flex justify-between items-center mb-1">
+            <h1 class="text-xl font-black tracking-tighter uppercase">Sanskardham</h1>
+            <div id="roleBadge" class="hidden bg-white/20 px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase">Guest</div>
         </div>
-        
-        <p class="text-[10px] text-center text-gray-300 font-bold uppercase tracking-widest mt-16">© Jatin Solanki Vision</p>
+        <div id="dateArea" class="hidden flex items-center bg-black/10 rounded-xl px-3 py-1.5 mt-2">
+            <span class="text-xs mr-2">📅</span>
+            <input type="date" id="dateInput" onchange="refreshAll()" class="bg-transparent text-white font-bold outline-none text-xs w-full">
+            <button onclick="toggleShift()" id="shiftIco" class="ml-2 bg-white/20 px-2 py-1 rounded text-sm">☀️</button>
+        </div>
+    </header>
+
+    <div id="loginPage" class="p-8 flex-grow flex flex-col justify-center space-y-4">
+        <input type="text" id="loginID" placeholder="User ID" class="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 outline-none text-center font-bold">
+        <input type="password" id="loginPass" placeholder="Password" class="w-full p-4 rounded-2xl bg-gray-50 border border-gray-200 outline-none text-center font-bold">
+        <button onclick="login()" class="w-full gradient-header text-white p-4 rounded-2xl font-bold btn-active uppercase">Login</button>
     </div>
 
-    <div id="mainApp" class="hidden flex flex-col min-h-screen">
-        
-        <div class="vision-blue text-white p-6 pb-12 rounded-b-[40px] shadow-lg sticky top-0 z-50">
-            <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h1 class="text-2xl font-black tracking-tight uppercase leading-none">SANSKARDHAM</h1>
-                    <p class="text-[10px] font-bold opacity-70 tracking-widest mt-1">VISION V2.0</p>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button id="shiftIco" onclick="toggleShift()" class="bg-white/20 p-2.5 rounded-full text-sm">☀️</button>
-                    <button id="roleLabel" class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider">GUEST</button>
-                </div>
+    <div id="mainMenu" class="hidden p-5 space-y-4 flex-grow">
+        <div class="grid grid-cols-2 gap-3">
+            <div onclick="showDutySection()" class="main-card p-4 bg-white rounded-[25px] flex flex-col items-center justify-center btn-active cursor-pointer border-blue-100 border-2 shadow-sm">
+                <span class="text-3xl mb-1">📅</span>
+                <span class="font-black text-slate-700 text-[10px] uppercase">Duty List</span>
             </div>
-
-            <div class="bg-white/10 p-3 rounded-2xl flex items-center justify-between border border-white/20">
-                <div class="flex items-center space-x-3 flex-grow cursor-pointer">
-                    <span class="text-lg">📅</span>
-                    <input type="date" id="mainDate" onchange="syncAllDepts()" class="bg-transparent font-bold outline-none text-white cursor-pointer text-sm w-full">
-                </div>
-                <span class="text-white opacity-50 text-xs">▼</span>
+            <div onclick="showProfileSection()" class="main-card p-4 bg-white rounded-[25px] flex flex-col items-center justify-center btn-active cursor-pointer border-green-100 border-2 shadow-sm">
+                <span class="text-3xl mb-1">👤</span>
+                <span class="font-black text-slate-700 text-[10px] uppercase">My Profile</span>
             </div>
         </div>
+    </div>
 
-        <div id="mainMenu" class="px-6 -mt-6 flex-grow space-y-6 pb-24 animate-fade-in">
+    <div id="profileSection" class="hidden p-5 space-y-5 flex-grow">
+        <button onclick="backToMenu()" class="text-blue-600 font-bold text-[10px] uppercase">⬅ Back</button>
+        <div class="bg-blue-50 p-6 rounded-[30px] space-y-3">
+            <input type="text" id="profName" placeholder="Full Name" class="w-full p-3 rounded-xl border-none font-bold text-sm">
+            <input type="text" id="profID" placeholder="Staff ID / Roll No" class="w-full p-3 rounded-xl border-none font-bold text-sm">
+            <select id="profExp" class="w-full p-3 rounded-xl border-none font-bold text-sm bg-white">
+                <option value="">Select Experience Dept</option>
+                <option value="OPD">OPD</option>
+                <option value="EMERGENCY">EMERGENCY</option>
+                <option value="ORTHOPEDIC">ORTHOPEDIC</option>
+                <option value="ICU">ICU</option>
+            </select>
+            <button onclick="saveProfile()" class="w-full bg-blue-600 text-white p-3 rounded-xl font-bold uppercase text-xs">Save Profile</button>
+        </div>
+    </div>
+
+    <div id="dutySection" class="hidden p-5 space-y-4 flex-grow pb-32">
+        <button onclick="backToMenu()" class="text-blue-600 font-bold text-[10px] uppercase">⬅ Back</button>
+        <div class="relative">
+            <input type="text" id="searchBar" onkeyup="doSearch()" placeholder="શોધો..." class="w-full p-3.5 pl-10 rounded-2xl bg-white border border-gray-100 outline-none font-bold">
+            <span class="absolute left-3.5 top-3.5">🔍</span>
+        </div>
+        <div id="deptGrid" class="grid grid-cols-2 gap-3"></div>
+    </div>
+
+    <div id="listPage" class="hidden p-5 flex-grow pb-32">
+        <button onclick="backToDuty()" class="text-blue-600 font-bold text-[10px] mb-4 uppercase">⬅ Back</button>
+        <div class="text-center mb-6">
+            <h2 id="lTitle" class="text-2xl font-black text-gray-800 uppercase italic"></h2>
+            <p id="lSub" class="text-[9px] font-bold text-gray-400 uppercase tracking-[3px]"></p>
+        </div>
+        <div id="lBody" class="space-y-2.5"></div>
+    </div>
+
+    <div id="editModal" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-6 backdrop-blur-sm">
+        <div class="bg-white w-full rounded-[40px] p-6 shadow-2xl modal-anim max-h-[90vh] overflow-y-auto">
+            <h3 id="editDeptLabel" class="font-black text-gray-800 mb-2 text-center uppercase text-sm border-b pb-1"></h3>
             
-            <button onclick="openNoticeBoard()" class="w-full bg-orange-500 text-white p-4 rounded-2xl font-bold shadow-lg flex items-center justify-center space-x-2 active:scale-95 transition-all card-shadow">
-                <span>📢</span> <span>NOTICE BOARD (નોટિસ જુઓ)</span>
-            </button>
+            <div id="suggestionArea" class="mb-4">
+                <p class="text-[8px] font-bold text-blue-600 uppercase mb-2">Experienced Staff:</p>
+                <div id="suggestionList" class="flex flex-wrap gap-2"></div>
+            </div>
 
-            <div>
-                <div class="flex justify-between items-center mb-4 px-2">
-                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hospital Depts</h3>
-                    <p class="text-[10px] font-bold text-blue-600">Real-time Updates</p>
-                </div>
-                
-                <div id="deptGrid" class="grid grid-cols-2 gap-4">
+            <input type="text" id="staffInput" placeholder="Staff Name..." class="w-full p-4 bg-gray-100 rounded-2xl font-bold text-center text-sm mb-4">
+
+            <div class="bg-orange-50 p-4 rounded-2xl mb-4">
+                <p class="text-[9px] font-bold text-orange-600 uppercase mb-2">Assign for Multiple Days? (Optional)</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[8px] font-bold text-gray-400">START DATE</label>
+                        <input type="date" id="bulkStart" class="w-full p-2 rounded-lg text-xs font-bold border-none">
                     </div>
-            </div>
-        </div>
-
-        <div id="slotListPage" class="hidden px-6 pt-4 flex-grow space-y-4 pb-24">
-            <button onclick="backToDepts()" class="text-blue-600 font-bold text-[10px] uppercase bg-blue-50 px-4 py-1.5 rounded-full">⬅ Back to Depts</button>
-            <div class="text-center my-4">
-                <h2 id="deptTitle" class="text-2xl font-black uppercase italic text-slate-800 leading-none"></h2>
-                <p id="deptSub" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1"></p>
-            </div>
-            <div id="slotBody" class="space-y-3">
+                    <div>
+                        <label class="text-[8px] font-bold text-gray-400">END DATE</label>
+                        <input type="date" id="bulkEnd" class="w-full p-2 rounded-lg text-xs font-bold border-none">
+                    </div>
                 </div>
-        </div>
-
-        <footer class="text-center py-6 mt-auto border-t bg-white/50">
-            <p class="text-[10px] font-black text-blue-900 opacity-30 tracking-[4px] uppercase">JATIN SOLANKI BY VISION</p>
-        </footer>
-    </div>
-
-    <div id="noticePage" class="fixed inset-0 z-[200] bg-white hidden flex flex-col">
-        <div class="vision-blue p-4 text-white flex items-center justify-between shadow-md sticky top-0">
-            <div class="flex items-center space-x-4">
-                <button onclick="closeNoticeBoard()" class="text-xl">←</button>
-                <h2 class="font-bold text-sm uppercase tracking-wider">Notice Board</h2>
             </div>
-            <span class="text-[10px] font-black opacity-50">Sanskardham</span>
-        </div>
-        <div id="chatBox" class="flex-grow whatsapp-bg p-4 overflow-y-auto flex flex-col">
-            </div>
-        
-        <div id="adminPanel" class="hidden p-3 bg-gray-100 border-t flex flex-col space-y-2 sticky bottom-0">
+
             <div class="flex space-x-2">
-                <input type="text" id="msgText" placeholder="સંદેશ લખો..." class="flex-grow p-3 rounded-full border border-gray-200 outline-none shadow-inner text-sm">
-                <button onclick="pushNoticeMsg('text')" class="bg-green-600 text-white p-3 rounded-full px-5 font-bold text-xs active:scale-95">મોકલો</button>
-            </div>
-            <div class="flex justify-around py-1">
-                <label class="bg-white px-4 py-2 rounded-xl text-[10px] font-bold shadow-sm cursor-pointer border border-gray-100 text-blue-700 active:scale-95">📷 PHOTO <input type="file" accept="image/*" class="hidden" onchange="handleFileNotice('image', this)"></label>
-                <label class="bg-white px-4 py-2 rounded-xl text-[10px] font-bold shadow-sm cursor-pointer border border-gray-100 text-red-700 active:scale-95">📄 PDF <input type="file" accept=".pdf" class="hidden" onchange="handleFileNotice('pdf', this)"></label>
+                <button onclick="closeEdit()" class="flex-1 p-4 bg-gray-100 rounded-2xl font-bold text-gray-400 text-[10px]">CANCEL</button>
+                <button onclick="saveSlot()" class="flex-1 p-4 gradient-header text-white rounded-2xl font-bold text-[10px]">SAVE DUTY</button>
             </div>
         </div>
     </div>
 
-    <div id="slotModal" class="hidden fixed inset-0 bg-black/60 z-[300] flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-white w-full rounded-[35px] p-6 shadow-2xl animate-fade-in">
-            <h3 class="font-black text-center mb-4 uppercase text-sm border-b pb-2 tracking-widest text-slate-800">ડ્યુટી સેટ કરો</h3>
-            <input type="text" id="staffNameInput" placeholder="સ્ટાફનું નામ લખો..." class="w-full p-4 bg-gray-50 rounded-2xl font-bold text-center mb-6 border border-gray-100 outline-none focus:ring-2 focus:ring-blue-400">
-            <div class="flex space-x-3">
-                <button onclick="closeSlotModal()" class="flex-1 p-4 bg-gray-100 rounded-2xl font-bold text-gray-400 text-xs active:scale-95">CANCEL</button>
-                <button onclick="saveSlotDutyProcess()" class="flex-1 p-4 gradient-header text-white rounded-2xl font-bold text-xs shadow-lg active:scale-95">SAVE DUTY</button>
-            </div>
-        </div>
-    </div>
-
+    <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/90 border-t p-3 flex justify-center z-50">
+        <p class="text-blue-900 font-black text-[8px] tracking-[4px] opacity-40 uppercase">Jatin Solanki By Vision</p>
+    </footer>
 </div>
 
 <script>
-    // --- FIREBASE SETUP ---
     const firebaseConfig = { databaseURL: "https://jatin-9a897-default-rtdb.firebaseio.com/" };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("hospital_v11_final");
-    const noticeDB = firebase.database().ref("hospital_notices_v2");
+    const profileDB = firebase.database().ref("hospital_staff_profiles");
 
-    let userRole = "viewer", currentShift = "Day", selectedDateStr = "", hospitalData = {}, editingSlotKey = "";
+    let role = "viewer", shift = "Day", selectedDate = "", appData = {}, staffProfiles = {}, currentEditKey = "";
 
-    // --- HELPER: CUSTOM TOAST (No more browser alerts) ---
-    function showNotification(msg) {
-        const x = document.getElementById("customToast");
-        x.innerText = msg;
-        x.className = "show";
-        setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
-    }
+    window.onload = () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = today;
+        document.getElementById('bulkStart').value = today;
+        document.getElementById('bulkEnd').value = today;
+        selectedDate = today;
+    };
 
-    // --- 1. LOGIN SYSTEM (Auto-Role via Password) ---
-    function checkLoginProcess() {
+    function login() {
         const id = document.getElementById('loginID').value.trim();
-        const pass = document.getElementById('loginPass').value;
+        const p = document.getElementById('loginPass').value;
+        if(id === "ssgd" && p === "9099020925") role = "admin";
+        else if(id === "ssgd" && p === "9712284024") role = "viewer";
+        else return alert("Invalid ID/Pass");
 
-        if (id === "ssgd" && pass === "9099020925") {
-            userRole = "admin"; // Admit Role
-            launchApp();
-        } else if (id === "ssgd" && pass === "9712284024") {
-            userRole = "staff"; // Staff Role
-            launchApp();
-        } else {
-            showNotification("ખોટો ID અથવા પાસવર્ડ!");
-        }
+        document.getElementById('loginPage').classList.add('hidden');
+        document.getElementById('mainMenu').classList.remove('hidden');
+        document.getElementById('roleBadge').classList.remove('hidden').innerText = role;
+        startSync();
     }
 
-    function launchApp() {
-        // UI transitions
-        document.getElementById('loginPage').style.top = '-100%';
-        setTimeout(() => { document.getElementById('loginPage').style.display = 'none'; }, 500);
-        document.getElementById('mainApp').classList.remove('hidden');
-        
-        // App setup
-        selectedDateStr = new Date().toISOString().split('T')[0];
-        document.getElementById('mainDate').value = selectedDateStr;
-        document.getElementById('roleLabel').innerText = userRole.toUpperCase();
-        
-        // Admin powers
-        if(userRole === 'admin') {
-            document.getElementById('adminPanel').classList.remove('hidden');
-            document.getElementById('roleLabel').classList.remove('bg-white/20');
-            document.getElementById('roleLabel').classList.add('bg-red-500');
-        } else {
-            document.getElementById('roleLabel').classList.remove('bg-white/20');
-            document.getElementById('roleLabel').classList.add('bg-green-500');
-        }
-        
-        // Data sync
-        db.on('value', (snap) => { hospitalData = snap.val() || {}; });
-        listenToNotices();
-        renderDeptGrid();
-        showNotification("લોગિન સફળ!");
+    function startSync() {
+        db.on('value', (s) => appData = s.val() || { "Depts": ["OPD", "EMERGENCY", "OFF LIST", "ORTHOPEDIC"] });
+        profileDB.on('value', (s) => staffProfiles = s.val() || {});
     }
 
-    // --- 2. DEPT GRID (V2.0 Style Cards) ---
-    function renderDeptGrid() {
-        const depts = [
-            { name: "OPD", img: "🏥", slots: 10 },
-            { name: "OFF LIST", img: "😴", slots: 8 },
-            { name: "EMERGENCY", img: "🚑", slots: 6 },
-            { name: "DAYCARE", img: "🏥", slots: 6 },
-            { name: "ICU", img: "🏥", slots: 6 },
-            { name: "WARD", img: "🏢", slots: 8 }
-        ];
-        const grid = document.getElementById('deptGrid');
-        grid.innerHTML = "";
-        depts.forEach(d => {
-            grid.innerHTML += `
-                <div onclick="openDeptPage('${d.name}', ${d.slots})" class="bg-white p-6 rounded-[35px] card-shadow border border-gray-50 flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer">
-                    <span class="text-4xl mb-3">${d.img}</span>
-                    <span class="font-black text-slate-700 text-[10px] uppercase tracking-wider text-center leading-tight">${d.name}</span>
-                </div>
-            `;
-        });
-    }
-
-    // --- 3. SLOT LIST PAGE ---
-    function openDeptPage(deptName, totalSlots) {
+    function showDutySection() {
         document.getElementById('mainMenu').classList.add('hidden');
-        document.getElementById('slotListPage').classList.remove('hidden');
-        document.getElementById('deptTitle').innerText = deptName;
-        renderDeptSlots(deptName, totalSlots);
+        document.getElementById('dutySection').classList.remove('hidden');
+        document.getElementById('dateArea').classList.remove('hidden');
+        renderGrid();
     }
-
-    function backToDepts() {
-        document.getElementById('slotListPage').classList.add('hidden');
+    function showProfileSection() {
+        document.getElementById('mainMenu').classList.add('hidden');
+        document.getElementById('profileSection').classList.remove('hidden');
+    }
+    function backToMenu() {
+        document.querySelectorAll('#dutySection, #profileSection, #listPage, #dateArea').forEach(e => e.classList.add('hidden'));
         document.getElementById('mainMenu').classList.remove('hidden');
     }
+    function backToDuty() {
+        document.getElementById('listPage').classList.add('hidden');
+        document.getElementById('dutySection').classList.remove('hidden');
+    }
 
-    function renderDeptSlots(deptName, totalSlots) {
-        document.getElementById('deptSub').innerText = `${currentShift} SHIFT | ${selectedDateStr}`;
-        const body = document.getElementById('slotBody');
-        body.innerHTML = "";
-        
-        for(let i=1; i<=totalSlots; i++) {
-            let slotKey = `${selectedDateStr}_${deptName}_${i}_${currentShift}`;
-            let staffName = hospitalData[slotKey] || "---";
-            
-            // If admin, make it clickable and underline
-            let clickAction = userRole === 'admin' ? `onclick="openEditSlotModal('${slotKey}')"` : "";
-            let adminStyle = userRole === 'admin' ? "underline decoration-blue-200 text-blue-700" : "text-slate-800";
+    function renderGrid() {
+        const grid = document.getElementById('deptGrid');
+        grid.innerHTML = "";
+        const ds = appData["Depts"] || ["OPD", "EMERGENCY", "OFF LIST", "ORTHOPEDIC"];
+        ds.forEach(d => {
+            grid.innerHTML += `<div onclick="openView('${d}')" class="p-4 bg-white rounded-[25px] border border-slate-100 shadow-sm flex flex-col items-center btn-active">
+                <span class="text-2xl mb-1">${d.includes('OFF')?'😴':'🏥'}</span>
+                <span class="font-bold text-slate-700 text-[9px] uppercase">${d}</span>
+            </div>`;
+        });
+    }
 
-            body.innerHTML += `
-                <div ${clickAction} class="p-4 bg-gray-50 rounded-2xl flex justify-between items-center border-l-4 border-blue-500 shadow-sm transition-all ${userRole === 'admin' ? 'active:scale-95 cursor-pointer' : ''}">
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest">SLOT ${i}</span>
-                    <span class="font-bold text-sm ${adminStyle}">${staffName}</span>
-                </div>
-            `;
+    function openView(d) {
+        document.getElementById('dutySection').classList.add('hidden');
+        document.getElementById('listPage').classList.remove('hidden');
+        document.getElementById('lTitle').innerText = d;
+        document.getElementById('lSub').innerText = `${shift} | ${selectedDate}`;
+        let h = "";
+        const limit = (d.toUpperCase() === 'OPD') ? 10 : 6;
+        for(let i=1; i<=limit; i++) {
+            let key = `${selectedDate}_${d}_${i}_${shift}`;
+            let val = appData[key] || "---";
+            h += `<div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border-l-4 border-blue-600">
+                <span class="text-[8px] font-bold text-slate-400 uppercase">Slot ${i}</span>
+                <span onclick="${role==='admin'?`openEdit('${key}','${d}','${i}')`:''}" class="${role==='admin'?'text-blue-600 font-bold underline italic':'font-bold text-slate-800'}">${val}</span>
+            </div>`;
         }
+        document.getElementById('lBody').innerHTML = h;
     }
 
-    // --- 4. ADMIN EDIT LOGIC ---
-    function openEditSlotModal(key) {
-        editingSlotKey = key;
-        document.getElementById('staffNameInput').value = hospitalData[key] === "---" ? "" : (hospitalData[key] || "");
-        document.getElementById('slotModal').classList.remove('hidden');
-        // Auto-focus input
-        setTimeout(() => document.getElementById('staffNameInput').focus(), 200);
-    }
-
-    function closeSlotModal() { document.getElementById('slotModal').classList.add('hidden'); }
-
-    function saveSlotDutyProcess() {
-        const newName = document.getElementById('staffNameInput').value.trim() || "---";
-        db.child(editingSlotKey).set(newName).then(() => {
-            closeSlotModal();
-            showNotification("ડ્યુટી સેવ થઈ ગઈ!");
-            // Local update for speed
-            hospitalData[editingSlotKey] = newName;
-            // Refresh current view
-            let currentDept = document.getElementById('deptTitle').innerText;
-            // Get total slots based on dept name (sadly we need this hack or pass slots via global var)
-            let slotsDef = {"OPD":10, "OFF LIST":8, "EMERGENCY":6, "DAYCARE":6, "ICU":6, "WARD":8};
-            renderDeptSlots(currentDept, slotsDef[currentDept] || 6);
-        });
-    }
-
-    // --- 5. NOTICE BOARD (WhatsApp Look) ---
-    function openNoticeBoard() { document.getElementById('noticePage').classList.remove('hidden'); }
-    function closeNoticeBoard() { document.getElementById('noticePage').classList.add('hidden'); }
-
-    function pushNoticeMsg(type, content = "") {
-        const text = document.getElementById('msgText').value.trim();
-        if(!text && type === 'text') return;
+    let currentSlotIdx = "";
+    function openEdit(key, dept, idx) {
+        currentEditKey = key;
+        currentSlotIdx = idx;
+        document.getElementById('editDeptLabel').innerText = `${dept} - Slot ${idx}`;
+        document.getElementById('staffInput').value = (appData[key] === "---") ? "" : (appData[key] || "");
         
-        const newMsg = {
-            type: type,
-            content: type === 'text' ? text : content,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            timestamp: Date.now()
-        };
-        chatDB.push(newMsg);
-        document.getElementById('msgText').value = "";
-    }
-
-    function listenToNotices() {
-        chatDB.on('value', (snap) => {
-            const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML = "";
-            const data = snap.val();
-            if(!data) return;
-            Object.values(data).forEach(m => {
-                let body = "";
-                if(m.type === 'text') body = `<p class="font-bold text-slate-800 leading-snug">${m.content}</p>`;
-                else if(m.type === 'image') body = `<img src="${m.content}" class="rounded-lg w-full max-h-60 object-cover" onclick="window.open('${m.content}')">`;
-                else if(m.type === 'pdf') body = `<div onclick="window.open('${m.content}')" class="flex items-center space-x-2 text-red-600 font-bold cursor-pointer">📄<span>PDF NOTICE</span></div>`;
-                
-                chatBox.innerHTML += `
-                    <div class="msg-bubble msg-admin self-start shadow">
-                        ${body}
-                        <p class="text-[9px] text-gray-400 mt-1 text-right leading-none">${m.time}</p>
-                    </div>
-                `;
-            });
-            // Scroll to bottom
-            setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 100);
+        const list = document.getElementById('suggestionList');
+        list.innerHTML = "";
+        Object.values(staffProfiles).forEach(p => {
+            if(p.exp.toUpperCase() === dept.toUpperCase()) {
+                list.innerHTML += `<div onclick="setStaff('${p.name}')" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[9px] font-bold border border-blue-200">+ ${p.name}</div>`;
+            }
         });
+        document.getElementById('editModal').classList.remove('hidden');
     }
 
-    function handleFileNotice(type, input) {
-        const file = input.files[0];
-        if(!file) return;
-        if(file.size > 2 * 1024 * 1024) return showNotification("ફાઈલ 2MB થી નાની હોવી જોઈએ.");
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            pushNoticeMsg(type, e.target.result);
-            showNotification("ફાઈલ અપલોડ થઈ રહી છે...");
-        };
-        reader.readAsDataURL(file);
+    function setStaff(name) { document.getElementById('staffInput').value = name; }
+    function closeEdit() { document.getElementById('editModal').classList.add('hidden'); }
+
+    // Bulk Save Logic
+    async function saveSlot() {
+        const staff = document.getElementById('staffInput').value.trim() || "---";
+        const start = document.getElementById('bulkStart').value;
+        const end = document.getElementById('bulkEnd').value;
+        const dept = document.getElementById('lTitle').innerText;
+
+        if (start === end) {
+            // Single Date Save
+            await db.child(currentEditKey).set(staff);
+        } else {
+            // Multi Date Bulk Save
+            let curr = new Date(start);
+            let last = new Date(end);
+            while (curr <= last) {
+                let dStr = curr.toISOString().split('T')[0];
+                let bKey = `${dStr}_${dept}_${currentSlotIdx}_${shift}`;
+                await db.child(bKey).set(staff);
+                curr.setDate(curr.getDate() + 1);
+            }
+        }
+        closeEdit();
+        openView(dept);
     }
 
-    // --- 6. GLOBAL CONTROLS ---
     function toggleShift() {
-        currentShift = (currentShift === "Day") ? "Night" : "Day";
-        document.getElementById('shiftIco').innerText = (currentShift === "Day") ? "☀️" : "🌙";
-        // Refresh slot page if open
-        if(!document.getElementById('slotListPage').classList.contains('hidden')) {
-             let currentDept = document.getElementById('deptTitle').innerText;
-             let slotsDef = {"OPD":10, "OFF LIST":8, "EMERGENCY":6, "DAYCARE":6, "ICU":6, "WARD":8};
-             renderDeptSlots(currentDept, slotsDef[currentDept] || 6);
-        }
+        shift = (shift === "Day") ? "Night" : "Day";
+        document.getElementById('shiftIco').innerText = (shift === "Day") ? "☀️" : "🌙";
+        if(!document.getElementById('listPage').classList.contains('hidden')) openView(document.getElementById('lTitle').innerText);
     }
 
-    function syncAllDepts() {
-        selectedDateStr = document.getElementById('mainDate').value;
-        // Refresh slot page if open
-        if(!document.getElementById('slotListPage').classList.contains('hidden')) {
-             let currentDept = document.getElementById('deptTitle').innerText;
-             let slotsDef = {"OPD":10, "OFF LIST":8, "EMERGENCY":6, "DAYCARE":6, "ICU":6, "WARD":8};
-             renderDeptSlots(currentDept, slotsDef[currentDept] || 6);
-        }
+    function refreshAll() {
+        selectedDate = document.getElementById('dateInput').value;
+        if(!document.getElementById('listPage').classList.contains('hidden')) openView(document.getElementById('lTitle').innerText);
     }
 
-    // Just in case we need database referencing elsewhere
-    const chatDB = firebase.database().ref("hospital_notices_v2");
+    function saveProfile() {
+        const name = document.getElementById('profName').value.trim();
+        const sid = document.getElementById('profID').value.trim();
+        const exp = document.getElementById('profExp').value;
+        if(!name || !sid || !exp) return alert("Fill all details");
+        profileDB.child(sid).set({ name, exp }).then(() => { alert("Saved!"); backToMenu(); });
+    }
+
+    function doSearch() {
+        const q = document.getElementById('searchBar').value.toLowerCase();
+        const res = document.getElementById('searchBox');
+        if(!q) { res.classList.add('hidden'); return; }
+        let found = "";
+        for(let k in appData) {
+            if(k.startsWith(selectedDate) && k.endsWith(shift) && appData[k].toLowerCase().includes(q)) {
+                found = k.split('_')[1]; break;
+            }
+        }
+        alert(found ? `તમારી ડ્યુટી ${found} માં છે.` : "મળ્યું નથી.");
+    }
 </script>
-
 </body>
 </html>
