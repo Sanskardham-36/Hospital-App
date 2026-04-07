@@ -1,204 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="gu">
 <head>
-  <title>Hospital Duty App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sanskardham Hospital | Vision v2.0</title>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 
-  <style>
-    body {
-      font-family: Arial;
-      margin: 0;
-    }
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
-    header {
-      background: linear-gradient(to right, #1e40af, #3b82f6);
-      color: white;
-      padding: 15px;
-      text-align: center;
-    }
-
-    .container {
-      padding: 20px;
-    }
-
-    input, button {
-      padding: 10px;
-      margin: 5px;
-    }
-
-    .slot {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin: 5px;
-      cursor: pointer;
-    }
-
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: black;
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-    }
-  </style>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; touch-action: manipulation; }
+        .gradient-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
+        .btn-active:active { transform: scale(0.95); transition: 0.1s; }
+        .main-card { transition: all 0.3s ease; border: 1px solid #e2e8f0; }
+        .main-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .download-fab { position: fixed; bottom: 85px; right: 20px; z-index: 100; }
+        .modal-anim { animation: zoomIn 0.2s ease-out; }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    </style>
 </head>
 
 <body>
 
-<header>
-  <h2>🏥 SANSKARDHAM VISION</h2>
-</header>
+<div class="max-w-md mx-auto min-h-screen flex flex-col bg-white relative shadow-2xl overflow-x-hidden">
+    
+    <header class="gradient-header text-white p-6 rounded-b-[40px] shadow-lg sticky top-0 z-50">
+        <div class="flex justify-between items-center mb-2">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter uppercase leading-none">Sanskardham</h1>
+                <p class="text-[10px] font-bold text-blue-200 uppercase mt-1 tracking-widest">Vision v2.0</p>
+            </div>
+            <div id="roleBadge" class="hidden bg-white/20 px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-widest">Guest</div>
+        </div>
 
-<div class="container">
+        <!-- DATE + RANGE -->
+        <div id="dateArea" class="hidden flex flex-col bg-black/10 rounded-2xl px-4 py-2 mt-2">
+            <div class="flex items-center">
+                <span class="text-xs mr-2">📅</span>
+                <input type="date" id="dateInput" onchange="refreshAll()" class="bg-transparent text-white font-bold outline-none text-sm w-full">
+                <button onclick="toggleShift()" id="shiftIco" class="ml-2 bg-white/20 p-1 rounded-lg text-lg">☀️</button>
+            </div>
 
-  <!-- Login -->
-  <div id="loginBox">
-    <input id="id" placeholder="ID"><br>
-    <input id="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-  </div>
+            <div class="flex space-x-2 mt-2">
+                <input type="date" id="fromDate" class="w-1/2 p-2 rounded-lg text-black font-bold">
+                <input type="date" id="toDate" class="w-1/2 p-2 rounded-lg text-black font-bold">
+            </div>
+        </div>
+    </header>
 
-  <!-- Main App -->
-  <div id="app" style="display:none;">
+    <!-- LOGIN -->
+    <div id="loginPage" class="p-8 flex-grow flex flex-col justify-center space-y-5">
+        <input type="text" id="loginID" placeholder="User ID" class="w-full p-4 rounded-2xl border text-center font-bold">
+        <input type="password" id="loginPass" placeholder="Password" class="w-full p-4 rounded-2xl border text-center font-bold">
+        <button onclick="login()" class="w-full gradient-header text-white p-5 rounded-2xl font-bold">Login</button>
+    </div>
 
-    <input type="date" id="datePicker" onchange="loadDuty()">
+    <!-- MAIN -->
+    <div id="mainMenu" class="hidden p-6 flex-grow">
 
-    <button onclick="toggleShift()">Toggle Shift</button>
+        <input id="staffInput" placeholder="Staff Name" class="w-full p-3 border mb-3">
 
-    <h3 id="shiftText">Shift: Day</h3>
+        <button onclick="saveSlot()" class="w-full bg-green-600 text-white p-3 mb-3">
+            SAVE DUTY
+        </button>
 
-    <div id="dutyList"></div>
+        <input type="text" id="searchBar" placeholder="Search..." onkeyup="doSearch()" class="w-full p-3 border mb-2">
+        <div id="searchBox"></div>
 
-    <h3>📢 Notice</h3>
-    <input id="noticeText" placeholder="Enter notice">
-    <button onclick="addNotice()">Add</button>
+    </div>
 
-    <div id="noticeList"></div>
-
-  </div>
+    <!-- FOOTER -->
+    <footer class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t p-3 text-center">
+        <p class="text-blue-900 font-black text-[9px] tracking-[4px] opacity-40">
+            JATIN SOLANKI BY VISION
+        </p>
+    </footer>
 
 </div>
 
 <script>
-  // Firebase Config
-  const firebaseConfig = {
-    databaseURL: "https://jatin-9a897-default-rtdb.firebaseio.com/"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
 
-  let role = "";
-  let shift = "Day";
+const firebaseConfig = { databaseURL: "https://jatin-9a897-default-rtdb.firebaseio.com/" };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database().ref("hospital_v11_final");
 
-  function login() {
-    const id = document.getElementById("id").value;
-    const pass = document.getElementById("password").value;
+let role="viewer", shift="Day", selectedDate="", currentEditKey="2026-01-01_OPD_1_Day", appData={};
 
-    if (id === "ssgd" && pass === "9099020925") {
-      role = "admin";
-    } else if (id === "ssgd" && pass === "9712284024") {
-      role = "staff";
+window.onload = () => {
+    const t = new Date().toISOString().split('T')[0];
+    dateInput.value = t;
+    fromDate.value = t;
+    toDate.value = t;
+    selectedDate = t;
+
+    db.on('value',(s)=>{appData=s.val()||{};});
+}
+
+function login(){
+    let id=loginID.value;
+    let p=loginPass.value;
+
+    if(id=="ssgd" && p=="9099020925") role="admin";
+    else if(id=="ssgd") role="viewer";
+    else return alert("Invalid Login");
+
+    loginPage.style.display="none";
+    mainMenu.style.display="block";
+    dateArea.classList.remove('hidden');
+}
+
+function saveSlot(){
+
+    let name = staffInput.value || "---";
+
+    let from = fromDate.value || selectedDate;
+    let to = toDate.value || selectedDate;
+
+    let start = new Date(from);
+    let end = new Date(to);
+
+    if(start > end){
+        alert("From Date wrong che");
+        return;
+    }
+
+    let updates = {};
+
+    if(from === to){
+        let parts = currentEditKey.split('_');
+        let key = `${from}_${parts[1]}_${parts[2]}_${shift}`;
+        updates[key] = name;
     } else {
-      showToast("Invalid Login ❌");
-      return;
+        while(start <= end){
+            let d = start.toISOString().split('T')[0];
+            let parts = currentEditKey.split('_');
+            let key = `${d}_${parts[1]}_${parts[2]}_${shift}`;
+            updates[key] = name;
+            start.setDate(start.getDate() + 1);
+        }
     }
 
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("app").style.display = "block";
+    db.update(updates);
+    alert("✅ Duty Saved");
+}
 
-    loadDuty();
-    loadNotice();
-  }
+function doSearch(){
+    let q = searchBar.value.toLowerCase();
+    let res = "";
 
-  function toggleShift() {
-    shift = (shift === "Day") ? "Night" : "Day";
-    document.getElementById("shiftText").innerText = "Shift: " + shift;
-    loadDuty();
-  }
-
-  function getKey(dept, slot) {
-    const date = document.getElementById("datePicker").value;
-    return `${date}_${dept}_${slot}_${shift}`;
-  }
-
-  function loadDuty() {
-    const container = document.getElementById("dutyList");
-    container.innerHTML = "";
-
-    const depts = ["OPD", "ICU", "WARD"];
-
-    depts.forEach(dept => {
-      for (let i = 1; i <= 3; i++) {
-        const key = getKey(dept, i);
-
-        db.ref("hospital_v11_final/" + key).on("value", snap => {
-          const name = snap.val() || "Empty";
-
-          let div = document.createElement("div");
-          div.className = "slot";
-          div.innerText = `${dept} Slot ${i}: ${name}`;
-
-          div.onclick = () => editSlot(key);
-
-          container.appendChild(div);
-        });
-      }
-    });
-  }
-
-  function editSlot(key) {
-    if (role !== "admin") return;
-
-    const name = prompt("Enter Name:");
-    if (name) {
-      db.ref("hospital_v11_final/" + key).set(name);
-      showToast("Saved ✅");
+    for(let k in appData){
+        if(appData[k] && appData[k].toLowerCase().includes(q)){
+            res += `<div>${k} → ${appData[k]}</div>`;
+        }
     }
-  }
 
-  function addNotice() {
-    if (role !== "admin") return;
+    searchBox.innerHTML = res || "Not found";
+}
 
-    const text = document.getElementById("noticeText").value;
-
-    const notice = {
-      text: text,
-      date: new Date().toLocaleDateString(),
-      time: new Date().toLocaleTimeString()
-    };
-
-    db.ref("hospital_notices_v2").push(notice);
-    showToast("Notice Added 📢");
-  }
-
-  function loadNotice() {
-    db.ref("hospital_notices_v2").on("value", snap => {
-      const data = snap.val();
-      const container = document.getElementById("noticeList");
-      container.innerHTML = "";
-
-      for (let key in data) {
-        const n = data[key];
-        let div = document.createElement("div");
-        div.innerText = `${n.text} (${n.date} ${n.time})`;
-        container.appendChild(div);
-      }
-    });
-  }
-
-  function showToast(msg) {
-    const toast = document.createElement("div");
-    toast.innerText = msg;
-    toast.className = "toast";
-    document.body.appendChild(toast);
-
-    setTimeout(() => toast.remove(), 3000);
-  }
 </script>
 
 </body>
