@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Duty App</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { width: 90%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; }
+        button { width: 95%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        .btn-staff { background: #28a745; margin-top: 10px; }
+        .duty-item { background: #e9ecef; padding: 10px; margin: 10px 0; border-radius: 8px; text-align: left; border-left: 5px solid #007bff; }
+        hr { margin: 30px 0; border: 0; border-top: 2px dashed #bbb; }
+    </style>
+</head>
+<body>
+
+    <h2>🏥 હોસ્પિટલ ડ્યુટી એપ</h2>
+
+    <div class="card">
+        <h3>➕ નવી ડ્યુટી ઉમેરો (Admin)</h3>
+        <input type="text" id="staffName" placeholder="સ્ટાફનું નામ">
+        <input type="text" id="deptName" placeholder="વિભાગ (દા.ત. ICU)">
+        <input type="text" id="shiftTime" placeholder="શિફ્ટનો સમય (દા.ત. 8 AM - 2 PM)">
+        <button onclick="saveDuty()">ડેટા સેવ કરો</button>
+    </div>
+
+    <hr>
+
+    <div class="card">
+        <h3>🔍 તમારી ડ્યુટી શોધો (Staff)</h3>
+        <input type="text" id="searchName" placeholder="તમારું નામ લખો..." onkeyup="searchDuty()">
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+
+        // તમારો Firebase Config કોડ અહીં છે
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRYdZDpL-u6zSbzm41inf1ofH4_d-aaII",
+            authDomain: "hospital-app-18255.firebaseapp.com",
+            projectId: "hospital-app-18255",
+            storageBucket: "hospital-app-18255.firebasestorage.app",
+            messagingSenderId: "316092753201",
+            appId: "1:316092753201:web:7c8af9ac7a912bcf9bbc10",
+            measurementId: "G-S1R8GND0V9"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- ૧. ડેટા સેવ કરવાનું ફંક્શન ---
+        window.saveDuty = async function() {
+            const name = document.getElementById("staffName").value;
+            const dept = document.getElementById("deptName").value;
+            const shift = document.getElementById("shiftTime").value;
+
+            if (name && dept && shift) {
+                try {
+                    await addDoc(collection(db, "duties"), {
+                        name: name,
+                        dept: dept,
+                        shift: shift,
+                        date: new Date().toLocaleDateString()
+                    });
+                    alert("ડેટા સેવ થઈ ગયો!");
+                    document.getElementById("staffName").value = "";
+                    document.getElementById("deptName").value = "";
+                    document.getElementById("shiftTime").value = "";
+                } catch (e) {
+                    alert("ભૂલ આવી: " + e.message);
+                }
+            } else {
+                alert("બધી વિગતો ભરો!");
+            }
+        }
+
+        // --- ૨. ડેટા શોધવાનું ફંક્શન ---
+        window.searchDuty = async function() {
+            const searchText = document.getElementById("searchName").value;
+            const resultsDiv = document.getElementById("results");
+
+            if (searchText.length < 2) {
+                resultsDiv.innerHTML = "";
+                return;
+            }
+
+            const q = query(collection(db, "duties"), where("name", "==", searchText));
+            const querySnapshot = await getDocs(q);
+            
+            let output = "";
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                output += `
+                    <div class="duty-item">
+                        <strong>નામ:</strong> ${data.name}<br>
+                        <strong>વિભાગ:</strong> ${data.dept}<br>
+                        <strong>સમય:</strong> ${data.shift}
+                    </div>
+                `;
+            });
+
+            if (output == "") {
+                resultsDiv.innerHTML = "<p style='color:red;'>કોઈ ડેટા મળ્યો નથી!</p>";
+            } else {
+                resultsDiv.innerHTML = output;
+            }
+        }
+    </script>
+</body>
+</html>
