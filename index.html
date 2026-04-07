@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sanskardham Hospital v4.5</title>
+    <title>Sanskardham Hospital v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
     
@@ -11,67 +11,59 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #f1f5f9; }
+        body { font-family: 'Poppins', sans-serif; background-color: #f1f5f9; overflow-x: hidden; }
         .gradient-header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
         .btn-active:active { transform: scale(0.95); transition: 0.1s; }
         .whatsapp-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
-        .msg-bubble { max-width: 85%; padding: 10px; border-radius: 15px; margin-bottom: 8px; }
+        .msg-bubble { max-width: 85%; padding: 10px; border-radius: 15px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .msg-admin { background: #dcf8c6; align-self: flex-start; border-bottom-left-radius: 2px; }
     </style>
 </head>
 <body>
 
-<div class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-2xl overflow-hidden">
+<div class="max-w-md mx-auto min-h-screen flex flex-col bg-white shadow-2xl overflow-hidden relative">
     
     <header id="appHeader" class="hidden gradient-header text-white p-5 rounded-b-[30px] shadow-lg sticky top-0 z-50">
         <div class="flex justify-between items-center">
-            <h1 class="text-xl font-black uppercase">Sanskardham</h1>
-            <div id="roleBadge" class="bg-white/20 px-2 py-1 rounded text-[9px] font-bold uppercase border border-white/10">Guest</div>
+            <h1 class="text-xl font-black uppercase tracking-tighter">Sanskardham</h1>
+            <div id="roleBadge" class="bg-white/20 px-2 py-1 rounded text-[9px] font-bold uppercase">Guest</div>
         </div>
-        <div id="dateArea" class="flex items-center bg-black/10 rounded-xl px-3 py-1.5 mt-3">
-            <input type="date" id="dateInput" onchange="refreshAll()" class="bg-transparent text-white font-bold text-xs w-full outline-none">
-            <button onclick="toggleShift()" id="shiftIco" class="ml-2 bg-white/20 px-2 py-1 rounded text-sm">☀️</button>
+        <div class="flex items-center bg-black/10 rounded-xl px-3 py-1.5 mt-3">
+            <input type="date" id="dateInput" class="bg-transparent text-white font-bold text-xs w-full outline-none">
+            <button id="shiftIco" class="ml-2 bg-white/20 px-2 py-1 rounded text-xs font-bold">☀️ DAY</button>
         </div>
     </header>
 
-    <div id="loginPage" class="p-8 flex-grow flex flex-col justify-center space-y-4">
-        <div class="text-center mb-6">
-            <span class="text-5xl">🏥</span>
-            <h2 class="text-2xl font-black text-gray-800 mt-2">Staff Login</h2>
+    <div id="loginPage" class="p-8 flex-grow flex flex-col justify-center space-y-5 bg-white">
+        <div class="text-center mb-4">
+            <div class="text-6xl mb-2">🏥</div>
+            <h2 class="text-2xl font-black text-gray-800 uppercase tracking-tight">Staff Portal</h2>
+            <p class="text-xs text-gray-400 font-bold">Enter your credentials to continue</p>
         </div>
-        <input type="text" id="loginID" placeholder="User ID" class="w-full p-4 rounded-2xl bg-gray-100 border-none outline-none text-center font-bold">
-        <input type="password" id="loginPass" placeholder="Password" class="w-full p-4 rounded-2xl bg-gray-100 border-none outline-none text-center font-bold">
-        <button onclick="loginProcess()" class="w-full gradient-header text-white p-4 rounded-2xl font-bold btn-active shadow-lg">LOGIN</button>
+        
+        <div class="space-y-3">
+            <input type="text" id="loginID" placeholder="User ID (ssgd)" class="w-full p-4 rounded-2xl bg-gray-50 border-2 border-gray-100 outline-none text-center font-bold focus:border-blue-500 transition-all">
+            <input type="password" id="loginPass" placeholder="Password" class="w-full p-4 rounded-2xl bg-gray-50 border-2 border-gray-100 outline-none text-center font-bold focus:border-blue-500 transition-all">
+            <button onclick="handleLogin()" class="w-full gradient-header text-white p-4 rounded-2xl font-black btn-active shadow-xl tracking-widest">LOGIN</button>
+        </div>
+        
+        <p class="text-[10px] text-center text-gray-400 font-bold uppercase tracking-widest mt-10">© Jatin Solanki Vision</p>
     </div>
 
-    <div id="mainMenu" class="hidden p-5 space-y-4 flex-grow">
-        <div class="grid grid-cols-2 gap-3">
-            <div onclick="showDutySection()" class="p-4 bg-white rounded-3xl flex flex-col items-center justify-center border-2 border-blue-50 shadow-sm btn-active">
+    <div id="mainMenu" class="hidden p-6 space-y-6 flex-grow animate-fade-in">
+        <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-[4px]">Main Dashboard</h3>
+        <div class="grid grid-cols-2 gap-4">
+            <div onclick="showSection('dutySection')" class="h-28 bg-white rounded-[32px] border-2 border-blue-50 shadow-sm flex flex-col items-center justify-center btn-active cursor-pointer">
                 <span class="text-3xl mb-1">📅</span>
-                <span class="font-black text-slate-700 text-[10px] uppercase">Duty List</span>
+                <span class="font-bold text-slate-700 text-[10px] uppercase">Duty List</span>
             </div>
-            <div onclick="showNoticeBoard()" class="p-4 bg-white rounded-3xl flex flex-col items-center justify-center border-2 border-green-50 shadow-sm btn-active">
+            <div onclick="showSection('noticeBoard')" class="h-28 bg-white rounded-[32px] border-2 border-green-50 shadow-sm flex flex-col items-center justify-center btn-active cursor-pointer">
                 <span class="text-3xl mb-1">📢</span>
-                <span class="font-black text-slate-700 text-[10px] uppercase">Notice Board</span>
+                <span class="font-bold text-slate-700 text-[10px] uppercase">Notice Board</span>
             </div>
         </div>
     </div>
 
-    <div id="noticeBoard" class="hidden flex-grow flex flex-col h-[80vh]">
-        <div class="bg-gray-100 p-3 flex items-center justify-between shadow-sm">
-            <button onclick="backToMenu()" class="text-blue-600 font-bold text-xs uppercase">⬅ Back</button>
-            <span class="font-black text-gray-700 text-xs uppercase tracking-widest">Notice Board</span>
-            <div class="w-8"></div>
-        </div>
-        <div id="chatArea" class="flex-grow whatsapp-bg p-4 overflow-y-auto flex flex-col"></div>
-        <div id="adminChatInput" class="hidden p-3 bg-gray-100 border-t flex flex-col space-y-2">
-            <div class="flex space-x-2">
-                <input type="text" id="msgText" placeholder="Type message..." class="flex-grow p-3 rounded-full border-none shadow-sm text-sm outline-none">
-                <button onclick="sendMsg('text')" class="bg-green-600 text-white p-3 rounded-full">➤</button>
-            </div>
-            <div class="flex justify-around py-1">
-                <label class="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-[10px] font-bold cursor-pointer">
-                    📷 Photo <input type="file" accept="image/*" class="hidden" onchange="uploadFile('image', this)">
-                </label>
-                <label class="bg-red-100 text-red-700 px-4 py-1.5 rounded-full text-[10px] font-bold cursor-pointer">
-                    📄 PDF <input type="file" accept=".pdf" class="hidden" onchange="uploadFile('pdf', this
+    <div id="noticeBoard" class="hidden flex-grow flex flex-col h-[85vh]">
+        <div class="bg-gray-100 p-4 flex items-center border-b">
+            <button onclick="showSection('mainMenu
