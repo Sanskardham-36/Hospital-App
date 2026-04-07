@@ -3,178 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital Pro App</title>
+    <title>Sanskar Dham Hospital | Vision</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 10px; }
-        .container { max-width: 500px; margin: auto; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2, h3 { color: #007bff; margin-top: 0; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-admin { background: #007bff; color: white; }
-        .btn-request { background: #ffc107; color: black; margin-top: 10px; }
-        .notice-card { background: #fff3cd; border-left: 5px solid #ff9800; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: left; }
-        .duty-item { background: #e7f3ff; padding: 15px; margin: 10px 0; border-radius: 10px; text-align: left; position: relative; }
-        .hidden { display: none; }
-        .tab-btn { width: 48%; display: inline-block; background: #ddd; color: #333; }
-        .active-tab { background: #007bff; color: white; }
+        :root { --primary: #0056b3; --admin-color: #d32f2f; --bg: #f0f4f8; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); margin: 0; color: #333; }
+        
+        .header { background: white; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-bottom: 4px solid var(--primary); position: sticky; top: 0; z-index: 100; }
+        .header h1 { margin: 0; color: var(--primary); font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .container { padding: 20px; max-width: 450px; margin: auto; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
+        
+        input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1.5px solid #eee; border-radius: 12px; box-sizing: border-box; outline: none; font-size: 16px; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; background: var(--primary); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-back { background: #6c757d; margin-top: 15px; width: auto; padding: 8px 20px; font-size: 14px; }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .menu-item { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); cursor: pointer; font-weight: 600; color: var(--primary); border: 1px solid #eee; }
+        
+        .section { display: none; }
+        .active { display: block; animation: fadeIn 0.4s; }
+        .footer { text-align: center; padding: 30px 20px; font-size: 13px; color: #888; }
+        .footer b { color: var(--primary); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🏥 હોસ્પિટલ મેનેજમેન્ટ</h2>
-
-    <div style="margin-bottom: 20px;">
-        <button id="staffTab" class="tab-btn active-tab" onclick="showTab('staff')">સ્ટાફ વ્યુ</button>
-        <button id="adminTab" class="tab-btn" onclick="showTab('admin')">એડમિન પેનલ</button>
+    <div class="header">
+        <h1>Sanskar Dham Hospital</h1>
     </div>
 
-    <div id="staffSection">
-        <div class="card">
-            <h3>📢 નોટિસ બોર્ડ</h3>
-            <div id="noticeDisplay">લોડ થઈ રહ્યું છે...</div>
+    <div class="container">
+        
+        <div id="loginSection" class="section active card">
+            <h2 style="margin-top:0;">Staff Portal</h2>
+            <p style="color:#777; font-size:14px;">તમારો ID અને પાસવર્ડ નાખો</p>
+            <input type="text" id="staffID" placeholder="User ID">
+            <input type="password" id="staffPass" placeholder="Password">
+            <button class="btn" onclick="handleLogin()">Login</button>
         </div>
 
-        <div class="card">
-            <h3>🔍 તમારી ડ્યુટી શોધો</h3>
-            <input type="text" id="searchName" placeholder="તમારું નામ લખો..." onkeyup="searchDuty()">
-            <div id="dutyResults"></div>
+        <div id="homeSection" class="section card">
+            <h3 id="welcomeMsg">Welcome</h3>
+            <div class="menu-grid">
+                <div class="menu-item" onclick="openSection('dutySection')">📋<br>ડ્યુટી લિસ્ટ</div>
+                <div class="menu-item" onclick="openSection('noticeSection')">📢<br>સૂચનાઓ</div>
+                <div id="adminMenuBtn" class="menu-item" style="display:none; color:var(--admin-color);" onclick="openSection('adminPanel')">⚙️<br>એડમિન ફોર્મ</div>
+                <div class="menu-item" onclick="location.reload()">🚪<br>Logout</div>
+            </div>
         </div>
+
+        <div id="dutySection" class="section card">
+            <h3>📋 ડ્યુટી લિસ્ટ શોધો</h3>
+            <input type="text" placeholder="તમારું નામ લખો..." onkeyup="alert('Firebase કનેક્શન બાકી છે')">
+            <button class="btn btn-back" onclick="openSection('homeSection')">⬅️ પાછા જાઓ</button>
+        </div>
+
+        <div id="adminPanel" class="section card" style="border-top: 5px solid var(--admin-color);">
+            <h3 style="color:var(--admin-color);">⚙️ Admin Control</h3>
+            <input type="text" placeholder="સ્ટાફનું નામ">
+            <input type="text" placeholder="વિભાગ (ICU/OPD)">
+            <input type="text" placeholder="સમય (Shift)">
+            <button class="btn" style="background:var(--admin-color)">Save Data</button>
+            <button class="btn btn-back" onclick="openSection('homeSection')">⬅️ પાછા જાઓ</button>
+        </div>
+
+        <div id="noticeSection" class="section card">
+            <h3>📢 હોસ્પિટલ સૂચનાઓ</h3>
+            <p style="color:#999;">હાલ કોઈ નવી નોટિસ નથી.</p>
+            <button class="btn btn-back" onclick="openSection('homeSection')">⬅️ પાછા જાઓ</button>
+        </div>
+
     </div>
 
-    <div id="adminSection" class="hidden">
-        <div id="adminLoginCard" class="card">
-            <h3>🔑 એડમિન લોગિન</h3>
-            <input type="password" id="adminPass" placeholder="પાસવર્ડ નાખો">
-            <button class="btn-admin" onclick="checkAdmin()">લોગિન</button>
-        </div>
-
-        <div id="adminControls" class="hidden">
-            <div class="card">
-                <h3>➕ નવી ડ્યુટી એડ કરો</h3>
-                <input type="text" id="sName" placeholder="સ્ટાફનું નામ">
-                <input type="text" id="sDept" placeholder="વિભાગ (ICU/OPD)">
-                <input type="text" id="sShift" placeholder="સમય (8-2)">
-                <button class="btn-admin" onclick="saveDuty()">ડેટા સેવ કરો</button>
-            </div>
-
-            <div class="card">
-                <h3>📝 નવી નોટિસ મૂકો</h3>
-                <input type="text" id="noticeText" placeholder="સૂચના અહીં લખો...">
-                <button style="background: #ff9800; color: white;" onclick="saveNotice()">નોટિસ પબ્લિશ કરો</button>
-            </div>
-            
-            <div class="card">
-                <h3>📩 રિવેસ્ટ લિસ્ટ</h3>
-                <div id="requestList">કોઈ વિનંતી નથી.</div>
-            </div>
-        </div>
+    <div class="footer">
+        Created by <b>Jatin Solanki</b><br>
+        <div style="font-weight:600; margin-top:5px; color:#555;">VISION VERSION 1.0</div>
     </div>
-</div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyBRYdZDpL-u6zSbzm41inf1ofH4_d-aaII",
-        authDomain: "hospital-app-18255.firebaseapp.com",
-        projectId: "hospital-app-18255",
-        storageBucket: "hospital-app-18255.firebasestorage.app",
-        messagingSenderId: "316092753201",
-        appId: "1:316092753201:web:7c8af9ac7a912bcf9bbc10"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // --- TAB SYSTEM ---
-    window.showTab = (tab) => {
-        if(tab === 'staff') {
-            document.getElementById('staffSection').classList.remove('hidden');
-            document.getElementById('adminSection').classList.add('hidden');
-            document.getElementById('staffTab').classList.add('active-tab');
-            document.getElementById('adminTab').classList.remove('active-tab');
-        } else {
-            document.getElementById('staffSection').classList.add('hidden');
-            document.getElementById('adminSection').classList.remove('hidden');
-            document.getElementById('adminTab').classList.add('active-tab');
-            document.getElementById('staffTab').classList.remove('active-tab');
+    <script>
+        function openSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
-    }
 
-    // --- ADMIN LOGIN ---
-    window.checkAdmin = () => {
-        const pass = document.getElementById('adminPass').value;
-        if(pass === "1234") { // તમારો ગુપ્ત પાસવર્ડ
-            document.getElementById('adminLoginCard').classList.add('hidden');
-            document.getElementById('adminControls').classList.remove('hidden');
-            loadRequests();
-        } else {
-            alert("ખોટો પાસવર્ડ!");
+        function handleLogin() {
+            const id = document.getElementById('staffID').value;
+            const pass = document.getElementById('staffPass').value;
+
+            // ૧. સ્ટાફ લોગિન ચેક
+            if(id === "ssgd" && pass === "9712284024") {
+                document.getElementById('welcomeMsg').innerText = "નમસ્તે, Staff 👋";
+                document.getElementById('adminMenuBtn').style.display = "none"; // એડમિન બટન છુપાવો
+                openSection('homeSection');
+            } 
+            // ૨. એડમિન લોગિન ચેક
+            else if(id === "ssgd" && pass === "9099020925") {
+                document.getElementById('welcomeMsg').innerText = "Welcome, Admin ⚙️";
+                document.getElementById('adminMenuBtn').style.display = "block"; // એડમિન બટન બતાવો
+                openSection('homeSection');
+            } 
+            else {
+                alert("ખોટો ID અથવા Password!");
+            }
         }
-    }
-
-    // --- SAVE DATA ---
-    window.saveDuty = async () => {
-        const name = document.getElementById('sName').value;
-        const dept = document.getElementById('sDept').value;
-        const shift = document.getElementById('sShift').value;
-        if(name && dept && shift) {
-            await addDoc(collection(db, "duties"), { name, dept, shift });
-            alert("ડ્યુટી સેવ થઈ!");
-        }
-    }
-
-    window.saveNotice = async () => {
-        const msg = document.getElementById('noticeText').value;
-        if(msg) {
-            await addDoc(collection(db, "notices"), { msg, time: new Date() });
-            alert("નોટિસ મુકાઈ ગઈ!");
-        }
-    }
-
-    // --- SEARCH & REQUEST ---
-    window.searchDuty = async () => {
-        const val = document.getElementById('searchName').value;
-        const resDiv = document.getElementById('dutyResults');
-        if(val.length < 2) return;
-
-        const q = query(collection(db, "duties"), where("name", "==", val));
-        const snap = await getDocs(q);
-        let html = "";
-        snap.forEach(doc => {
-            const d = doc.data();
-            html += `<div class="duty-item">
-                <b>${d.name}</b><br>વિભાગ: ${d.dept}<br>સમય: ${d.shift}
-                <button class="btn-request" onclick="sendRequest('${d.name}')">🔄 શિફ્ટ બદલવા વિનંતી</button>
-            </div>`;
-        });
-        resDiv.innerHTML = html || "મળ્યું નથી.";
-    }
-
-    window.sendRequest = async (name) => {
-        await addDoc(collection(db, "requests"), { name, status: "Pending", time: new Date() });
-        alert("વિનંતી એડમિનને મોકલી દેવામાં આવી છે.");
-    }
-
-    // --- REALTIME NOTICES ---
-    onSnapshot(collection(db, "notices"), (snap) => {
-        let h = "";
-        snap.forEach(doc => h += `<div class="notice-card">${doc.data().msg}</div>`);
-        document.getElementById('noticeDisplay').innerHTML = h || "કોઈ નવી નોટિસ નથી.";
-    });
-
-    // --- LOAD REQUESTS FOR ADMIN ---
-    async function loadRequests() {
-        onSnapshot(collection(db, "requests"), (snap) => {
-            let h = "";
-            snap.forEach(doc => h += `<div class="duty-item"><b>${doc.data().name}</b> એ શિફ્ટ બદલવા કહ્યું છે.</div>`);
-            document.getElementById('requestList').innerHTML = h || "કોઈ નવી રિક્વેસ્ટ નથી.";
-        });
-    }
-
-</script>
+    </script>
 </body>
 </html>
