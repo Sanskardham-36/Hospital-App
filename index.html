@@ -20,6 +20,8 @@
         .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         .overlay.active { display: block; }
         .btn-active:active { transform: scale(0.95); }
+        /* Table responsive style */
+        .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     </style>
 </head>
 <body>
@@ -95,7 +97,7 @@
             </div>
 
             <div class="overflow-x-auto bg-white rounded-2xl shadow-sm border border-blue-50">
-                <table class="w-full text-left border-collapse min-w-[450px]">
+                <table id="dutyTable" class="w-full text-left border-collapse min-w-[450px]">
                     <thead class="bg-slate-100 text-blue-900 text-[10px] uppercase font-black">
                         <tr>
                             <th class="p-3 border-b">Date</th>
@@ -105,6 +107,31 @@
                         </tr>
                     </thead>
                     <tbody id="fullDutyCont" class="text-[11px] font-bold text-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="staffListSection" class="hidden space-y-4">
+            <div class="bg-white p-4 rounded-3xl shadow-sm border border-blue-50 space-y-3">
+                <h2 class="text-2xl font-black text-blue-900">Staff Records</h2>
+                <div class="relative">
+                    <input type="text" id="staffSearch" onkeyup="filterStaffTable()" placeholder="નામ અથવા ID થી શોધો..." class="w-full p-3 pl-10 bg-gray-50 rounded-xl text-xs font-bold border outline-none">
+                    <span class="absolute left-3 top-3">🔍</span>
+                </div>
+                <button onclick="downloadStaffPDF()" class="w-full bg-blue-700 text-white p-3 rounded-xl font-bold text-xs uppercase shadow-lg">Download Staff PDF</button>
+            </div>
+
+            <div class="table-container bg-white rounded-2xl shadow-sm border border-blue-50">
+                <table id="staffExcelTable" class="w-full text-left border-collapse min-w-[500px]">
+                    <thead class="bg-blue-50 text-blue-800 text-[10px] uppercase font-black">
+                        <tr>
+                            <th class="p-3 border-b">ID</th>
+                            <th class="p-3 border-b">Staff Name</th>
+                            <th class="p-3 border-b">Mobile</th>
+                            <th class="p-3 border-b">Experience</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staffListCont" class="text-[11px] font-bold text-gray-700"></tbody>
                 </table>
             </div>
         </div>
@@ -137,11 +164,6 @@
             </div>
             <div id="lBody" class="space-y-3"></div>
         </div>
-
-        <div id="staffListSection" class="hidden space-y-3">
-            <h2 class="text-2xl font-black text-blue-900">Staff Records</h2>
-            <div id="staffListCont" class="space-y-3"></div>
-        </div>
     </main>
 
     <footer class="p-4 flex justify-center border-t bg-white">
@@ -150,7 +172,7 @@
 </div>
 
 <div id="rangeModal" class="hidden fixed inset-0 bg-black/70 z-[2000] flex items-center justify-center p-6 backdrop-blur-md">
-    <div class="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl">
+    <div class="bg-white w-full max-sm rounded-[40px] p-8 shadow-2xl">
         <h3 class="font-black text-center border-b pb-3 mb-5 text-blue-900 uppercase">Set Duty Slot</h3>
         <div class="space-y-4 mb-6">
             <div class="flex space-x-3">
@@ -198,24 +220,19 @@
     function login() {
         const id = document.getElementById('loginID').value.trim();
         const p = document.getElementById('loginPass').value;
-        
         if(id === "ssgd" && p === "9099020925") { role = "admin"; } 
         else if(id === "ssgd" && p === "9712284024") { role = "viewer"; } 
         else { return alert("ખોટો પાસવર્ડ!"); }
-
         document.getElementById('loginPage').classList.add('hidden');
         document.getElementById('menuBtn').classList.remove('hidden');
         document.getElementById('dateArea').classList.remove('hidden');
         document.getElementById('roleBadge').classList.remove('hidden');
         document.getElementById('roleBadge').innerText = role;
-        
         if(role === 'admin') document.getElementById('adminMenu').classList.remove('hidden');
-
         selDate = new Date().toISOString().split('T')[0];
         document.getElementById('dateInput').value = selDate;
         document.getElementById('fStart').value = selDate;
         document.getElementById('fEnd').value = selDate;
-        
         showSection('dutySection');
         syncData();
     }
@@ -263,7 +280,6 @@
         const sDate = document.getElementById('fStart').value;
         const eDate = document.getElementById('fEnd').value;
         cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center text-blue-300'>Filtering...</td></tr>";
-        
         let rows = [];
         Object.keys(appData).forEach(k => {
             const p = k.split('_');
@@ -274,14 +290,12 @@
                 }
             }
         });
-
         rows.sort((a,b) => new Date(b.d) - new Date(a.d));
         cont.innerHTML = "";
         if(rows.length === 0) {
             cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center text-gray-400'>No Records Found</td></tr>";
             return;
         }
-
         rows.forEach((r, i) => {
             const bg = i % 2 === 0 ? 'bg-white' : 'bg-blue-50/30';
             cont.innerHTML += `<tr class="${bg} border-b border-gray-100">
@@ -293,37 +307,81 @@
         });
     }
 
-    async function downloadPDF() {
+    function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         doc.setFontSize(16);
         doc.text("SANSKARDHAM HOSPITAL - DUTY LIST", 14, 15);
-        doc.setFontSize(9);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
-
         const data = [];
         document.querySelectorAll("#fullDutyCont tr").forEach(row => {
             const cols = row.querySelectorAll("td");
-            if(cols.length > 0) {
-                data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText.replace("\n", " "), cols[3].innerText]);
-            }
+            if(cols.length > 0) data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText.replace("\n", " "), cols[3].innerText]);
         });
-
-        if(data.length === 0) return alert("કોઈ ડેટા નથી!");
-
-        doc.autoTable({
-            startY: 28,
-            head: [['Date', 'Staff Name', 'Department', 'Shift']],
-            body: data,
-            theme: 'grid',
-            headStyles: { fillColor: [30, 58, 138] },
-            styles: { fontSize: 8, fontStyle: 'bold' }
-        });
-
+        doc.autoTable({ startY: 25, head: [['Date', 'Staff Name', 'Department', 'Shift']], body: data, theme: 'grid' });
         doc.save(`Duty_Report_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
-    // Modal & Save Functions
+    // --- Updated Staff Functions ---
+    function loadStaffRecords() {
+        const cont = document.getElementById('staffListCont');
+        cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center'>Loading...</td></tr>";
+        profDB.once('value', (s) => {
+            cont.innerHTML = "";
+            const data = s.val();
+            if(!data) { cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center'>No Records Found</td></tr>"; return; }
+            let i = 0;
+            Object.values(data).forEach(x => {
+                const bg = i % 2 === 0 ? 'bg-white' : 'bg-blue-50/20';
+                cont.innerHTML += `<tr class="${bg} border-b">
+                    <td class="p-3 text-gray-400">${x.id || '---'}</td>
+                    <td class="p-3 font-black text-blue-900 uppercase">${x.name}</td>
+                    <td class="p-3 font-bold">${x.mob || '---'}</td>
+                    <td class="p-3 text-gray-500">${x.exp || '---'}</td>
+                </tr>`;
+                i++;
+            });
+        });
+    }
+
+    function filterStaffTable() {
+        let input = document.getElementById("staffSearch").value.toUpperCase();
+        let rows = document.getElementById("staffListCont").getElementsByTagName("tr");
+        for (let i = 0; i < rows.length; i++) {
+            let nameCol = rows[i].getElementsByTagName("td")[1];
+            let idCol = rows[i].getElementsByTagName("td")[0];
+            if (nameCol || idCol) {
+                let txtValue = (nameCol.textContent || nameCol.innerText) + (idCol.textContent || idCol.innerText);
+                rows[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
+            }
+        }
+    }
+
+    function downloadStaffPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text("SANSKARDHAM HOSPITAL - STAFF RECORDS", 14, 15);
+        doc.setFontSize(9);
+        doc.text(`Total Staff Count: ${document.querySelectorAll("#staffListCont tr").length}`, 14, 22);
+
+        const data = [];
+        document.querySelectorAll("#staffListCont tr").forEach(row => {
+            if(row.style.display !== "none") {
+                const cols = row.querySelectorAll("td");
+                data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText, cols[3].innerText]);
+            }
+        });
+        doc.autoTable({
+            startY: 28,
+            head: [['ID', 'Staff Name', 'Mobile', 'Experience']],
+            body: data,
+            theme: 'striped',
+            headStyles: { fillColor: [29, 78, 216] }
+        });
+        doc.save("Staff_Records.pdf");
+    }
+
+    // Modal & Helpers
     function openRangeModal(key) {
         editKey = key;
         document.getElementById('rStaff').value = (appData[key] === "---" || !appData[key]) ? "" : appData[key];
@@ -331,15 +389,12 @@
         document.getElementById('rEnd').value = selDate;
         document.getElementById('rangeModal').classList.remove('hidden');
     }
-
     function closeModal() { document.getElementById('rangeModal').classList.add('hidden'); }
-
     function saveRangeDuty() {
         const name = document.getElementById('rStaff').value.trim() || "---";
         const start = new Date(document.getElementById('rStart').value);
         const end = new Date(document.getElementById('rEnd').value);
         if(!start || !end) return alert("તારીખ પસંદ કરો");
-        
         const parts = editKey.split('_'); 
         let updates = {};
         let temp = new Date(start);
@@ -351,36 +406,27 @@
         }
         db.update(updates).then(() => { closeModal(); openSlots(parts[1]); });
     }
-
-    // Helper Functions
     function toggleShift() {
         shift = (shift === "Day") ? "Night" : "Day";
         document.getElementById('shiftIco').innerText = (shift === "Day") ? "☀️" : "🌙";
         refreshData();
     }
-
     function refreshData() {
         selDate = document.getElementById('dateInput').value;
-        if(!document.getElementById('listPage').classList.contains('hidden')) {
-            openSlots(document.getElementById('lTitle').innerText);
-        }
+        if(!document.getElementById('listPage').classList.contains('hidden')) openSlots(document.getElementById('lTitle').innerText);
     }
-
     function searchName() {
         const q = document.getElementById('searchBar').value.toLowerCase();
         let foundDep = "";
         if(!q) { document.getElementById('searchRes').classList.add('hidden'); return; }
         for(let k in appData) {
-            if(k.startsWith(selDate) && k.endsWith(shift) && appData[k].toLowerCase().includes(q)) {
-                foundDep = k.split('_')[1]; break;
-            }
+            if(k.startsWith(selDate) && k.endsWith(shift) && appData[k].toLowerCase().includes(q)) { foundDep = k.split('_')[1]; break; }
         }
         const resDiv = document.getElementById('searchRes');
         resDiv.classList.remove('hidden');
         resDiv.innerHTML = foundDep ? `✅ તમારી ડ્યુટી ${foundDep} માં છે.` : `⚠️ નામ મળ્યું નથી.`;
         resDiv.className = `p-4 rounded-2xl font-bold text-center ${foundDep?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`;
     }
-
     function saveProfile() {
         const name = document.getElementById('pName').value.trim();
         const id = document.getElementById('pID').value.trim();
@@ -388,22 +434,6 @@
         profDB.push({ name, id, mob: document.getElementById('pMobile').value, exp: document.getElementById('pExp').value });
         alert("પ્રોફાઇલ સેવ થઈ ગઈ!");
         showSection('dutySection');
-    }
-
-    function loadStaffRecords() {
-        const cont = document.getElementById('staffListCont');
-        cont.innerHTML = "<p class='text-center py-4'>Loading...</p>";
-        profDB.once('value', (s) => {
-            cont.innerHTML = "";
-            const data = s.val();
-            if(!data) return cont.innerHTML = "No Records Found";
-            Object.values(data).forEach(x => {
-                cont.innerHTML += `<div class="p-4 bg-white border border-blue-50 rounded-2xl shadow-sm">
-                    <p class="font-black text-blue-900">${x.name}</p>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase">ID: ${x.id} | Mob: ${x.mob}</p>
-                </div>`;
-            });
-        });
     }
 </script>
 </body>
