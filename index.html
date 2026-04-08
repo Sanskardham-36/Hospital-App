@@ -1,4 +1,4 @@
-fc210dec<!doctype html>
+<!doctype html>
 <html lang="gu">
 <head>
     <meta charset="UTF-8">
@@ -20,8 +20,12 @@ fc210dec<!doctype html>
         .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         .overlay.active { display: block; }
         .btn-active:active { transform: scale(0.95); }
-        /* Table responsive style */
         .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        
+        /* Suggestions styling */
+        .suggestion-box { position: absolute; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; max-height: 150px; overflow-y: auto; z-index: 3000; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .suggestion-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-weight: 600; font-size: 13px; }
+        .suggestion-item:hover { background-color: #eff6ff; color: #1e40af; }
     </style>
 </head>
 <body>
@@ -97,7 +101,7 @@ fc210dec<!doctype html>
             </div>
 
             <div class="overflow-x-auto bg-white rounded-2xl shadow-sm border border-blue-50">
-                <table id="dutyTable" class="w-full text-left border-collapse min-w-[450px]">
+                <table class="w-full text-left border-collapse min-w-[450px]">
                     <thead class="bg-slate-100 text-blue-900 text-[10px] uppercase font-black">
                         <tr>
                             <th class="p-3 border-b">Date</th>
@@ -122,7 +126,7 @@ fc210dec<!doctype html>
             </div>
 
             <div class="table-container bg-white rounded-2xl shadow-sm border border-blue-50">
-                <table id="staffExcelTable" class="w-full text-left border-collapse min-w-[500px]">
+                <table class="w-full text-left border-collapse min-w-[500px]">
                     <thead class="bg-blue-50 text-blue-800 text-[10px] uppercase font-black">
                         <tr>
                             <th class="p-3 border-b">ID</th>
@@ -172,7 +176,7 @@ fc210dec<!doctype html>
 </div>
 
 <div id="rangeModal" class="hidden fixed inset-0 bg-black/70 z-[2000] flex items-center justify-center p-6 backdrop-blur-md">
-    <div class="bg-white w-full max-sm rounded-[40px] p-8 shadow-2xl">
+    <div class="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl">
         <h3 class="font-black text-center border-b pb-3 mb-5 text-blue-900 uppercase">Set Duty Slot</h3>
         <div class="space-y-4 mb-6">
             <div class="flex space-x-3">
@@ -185,9 +189,10 @@ fc210dec<!doctype html>
                     <input type="date" id="rEnd" class="w-full p-2 bg-gray-50 border rounded-xl text-xs font-bold">
                 </div>
             </div>
-            <div>
+            <div class="relative">
                 <label class="text-[9px] font-bold text-gray-400 block mb-1">STAFF NAME</label>
-                <input type="text" id="rStaff" placeholder="નામ લખો..." class="w-full p-4 bg-blue-50 rounded-2xl font-bold text-center outline-none border border-blue-100">
+                <input type="text" id="rStaff" onkeyup="showSuggestions(this.value)" placeholder="ટાઇપ કરો..." autocomplete="off" class="w-full p-4 bg-blue-50 rounded-2xl font-bold text-center outline-none border border-blue-100">
+                <div id="staffSuggestions" class="suggestion-box hidden"></div>
             </div>
         </div>
         <div class="flex space-x-3">
@@ -203,7 +208,7 @@ fc210dec<!doctype html>
     const db = firebase.database().ref("hospital_v11_final");
     const profDB = firebase.database().ref("staff_profiles");
 
-    let role = "viewer", shift = "Day", selDate = "", appData = {}, editKey = "";
+    let role = "viewer", shift = "Day", selDate = "", appData = {}, editKey = "", allStaff = [];
 
     function toggleMenu() {
         document.getElementById('sidebar').classList.toggle('open');
@@ -223,18 +228,46 @@ fc210dec<!doctype html>
         if(id === "ssgd" && p === "9099020925") { role = "admin"; } 
         else if(id === "ssgd" && p === "9712284024") { role = "viewer"; } 
         else { return alert("ખોટો પાસવર્ડ!"); }
+
         document.getElementById('loginPage').classList.add('hidden');
         document.getElementById('menuBtn').classList.remove('hidden');
         document.getElementById('dateArea').classList.remove('hidden');
         document.getElementById('roleBadge').classList.remove('hidden');
         document.getElementById('roleBadge').innerText = role;
-        if(role === 'admin') document.getElementById('adminMenu').classList.remove('hidden');
+        
+        if(role === 'admin') {
+            document.getElementById('adminMenu').classList.remove('hidden');
+            fetchAllStaff(); 
+        }
+
         selDate = new Date().toISOString().split('T')[0];
         document.getElementById('dateInput').value = selDate;
         document.getElementById('fStart').value = selDate;
         document.getElementById('fEnd').value = selDate;
         showSection('dutySection');
         syncData();
+    }
+
+    function fetchAllStaff() {
+        profDB.on('value', (s) => {
+            const data = s.val();
+            allStaff = data ? Object.values(data).map(x => x.name) : [];
+        });
+    }
+
+    function showSuggestions(val) {
+        const box = document.getElementById('staffSuggestions');
+        if (!val) { box.classList.add('hidden'); return; }
+        const filtered = allStaff.filter(name => name.toLowerCase().includes(val.toLowerCase()));
+        if (filtered.length > 0) {
+            box.innerHTML = filtered.map(name => `<div class="suggestion-item" onclick="selectStaff('${name}')">${name}</div>`).join('');
+            box.classList.remove('hidden');
+        } else { box.classList.add('hidden'); }
+    }
+
+    function selectStaff(name) {
+        document.getElementById('rStaff').value = name;
+        document.getElementById('staffSuggestions').classList.add('hidden');
     }
 
     function syncData() {
@@ -310,25 +343,23 @@ fc210dec<!doctype html>
     function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFontSize(16);
         doc.text("SANSKARDHAM HOSPITAL - DUTY LIST", 14, 15);
         const data = [];
         document.querySelectorAll("#fullDutyCont tr").forEach(row => {
             const cols = row.querySelectorAll("td");
             if(cols.length > 0) data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText.replace("\n", " "), cols[3].innerText]);
         });
-        doc.autoTable({ startY: 25, head: [['Date', 'Staff Name', 'Department', 'Shift']], body: data, theme: 'grid' });
-        doc.save(`Duty_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.autoTable({ startY: 25, head: [['Date', 'Staff Name', 'Department', 'Shift']], body: data });
+        doc.save(`Duty_Report.pdf`);
     }
 
-    // --- Updated Staff Functions ---
     function loadStaffRecords() {
         const cont = document.getElementById('staffListCont');
         cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center'>Loading...</td></tr>";
         profDB.once('value', (s) => {
             cont.innerHTML = "";
             const data = s.val();
-            if(!data) { cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center'>No Records Found</td></tr>"; return; }
+            if(!data) return;
             let i = 0;
             Object.values(data).forEach(x => {
                 const bg = i % 2 === 0 ? 'bg-white' : 'bg-blue-50/20';
@@ -347,23 +378,15 @@ fc210dec<!doctype html>
         let input = document.getElementById("staffSearch").value.toUpperCase();
         let rows = document.getElementById("staffListCont").getElementsByTagName("tr");
         for (let i = 0; i < rows.length; i++) {
-            let nameCol = rows[i].getElementsByTagName("td")[1];
-            let idCol = rows[i].getElementsByTagName("td")[0];
-            if (nameCol || idCol) {
-                let txtValue = (nameCol.textContent || nameCol.innerText) + (idCol.textContent || idCol.innerText);
-                rows[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
-            }
+            let txtValue = rows[i].textContent || rows[i].innerText;
+            rows[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
         }
     }
 
     function downloadStaffPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        doc.setFontSize(16);
         doc.text("SANSKARDHAM HOSPITAL - STAFF RECORDS", 14, 15);
-        doc.setFontSize(9);
-        doc.text(`Total Staff Count: ${document.querySelectorAll("#staffListCont tr").length}`, 14, 22);
-
         const data = [];
         document.querySelectorAll("#staffListCont tr").forEach(row => {
             if(row.style.display !== "none") {
@@ -371,25 +394,24 @@ fc210dec<!doctype html>
                 data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText, cols[3].innerText]);
             }
         });
-        doc.autoTable({
-            startY: 28,
-            head: [['ID', 'Staff Name', 'Mobile', 'Experience']],
-            body: data,
-            theme: 'striped',
-            headStyles: { fillColor: [29, 78, 216] }
-        });
+        doc.autoTable({ startY: 28, head: [['ID', 'Staff Name', 'Mobile', 'Experience']], body: data });
         doc.save("Staff_Records.pdf");
     }
 
-    // Modal & Helpers
     function openRangeModal(key) {
         editKey = key;
-        document.getElementById('rStaff').value = (appData[key] === "---" || !appData[key]) ? "" : appData[key];
+        document.getElementById('rStaff').value = (appData[key] === "---") ? "" : appData[key];
         document.getElementById('rStart').value = selDate;
         document.getElementById('rEnd').value = selDate;
+        document.getElementById('staffSuggestions').classList.add('hidden');
         document.getElementById('rangeModal').classList.remove('hidden');
     }
-    function closeModal() { document.getElementById('rangeModal').classList.add('hidden'); }
+
+    function closeModal() { 
+        document.getElementById('rangeModal').classList.add('hidden'); 
+        document.getElementById('staffSuggestions').classList.add('hidden');
+    }
+
     function saveRangeDuty() {
         const name = document.getElementById('rStaff').value.trim() || "---";
         const start = new Date(document.getElementById('rStart').value);
@@ -406,15 +428,18 @@ fc210dec<!doctype html>
         }
         db.update(updates).then(() => { closeModal(); openSlots(parts[1]); });
     }
+
     function toggleShift() {
         shift = (shift === "Day") ? "Night" : "Day";
         document.getElementById('shiftIco').innerText = (shift === "Day") ? "☀️" : "🌙";
         refreshData();
     }
+
     function refreshData() {
         selDate = document.getElementById('dateInput').value;
         if(!document.getElementById('listPage').classList.contains('hidden')) openSlots(document.getElementById('lTitle').innerText);
     }
+
     function searchName() {
         const q = document.getElementById('searchBar').value.toLowerCase();
         let foundDep = "";
@@ -427,6 +452,7 @@ fc210dec<!doctype html>
         resDiv.innerHTML = foundDep ? `✅ તમારી ડ્યુટી ${foundDep} માં છે.` : `⚠️ નામ મળ્યું નથી.`;
         resDiv.className = `p-4 rounded-2xl font-bold text-center ${foundDep?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`;
     }
+
     function saveProfile() {
         const name = document.getElementById('pName').value.trim();
         const id = document.getElementById('pID').value.trim();
