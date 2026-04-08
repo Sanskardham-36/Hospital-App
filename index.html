@@ -273,4 +273,195 @@
     // --- Core Functions ---
     function syncData() {
         db.on('value', (s) => {
-            appData = s.val() || { "Depts": ["OPD", "EMERGENCY", "OFF LIST"]
+            appData = s.val() || { "Depts": ["OPD", "EMERGENCY", "OFF LIST"] };
+            renderGrid();
+        });
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('deptGrid');
+        grid.innerHTML = "";
+        const depts = appData.Depts || ["OPD", "EMERGENCY", "OFF LIST"];
+        depts.forEach(d => {
+            grid.innerHTML += `<div onclick="openSlots('${d}')" class="p-6 bg-white rounded-[35px] border border-blue-50 shadow-sm flex flex-col items-center btn-active cursor-pointer">
+                <span class="text-3xl mb-2">${d.includes('OFF')?'😴':'🏥'}</span>
+                <span class="font-black text-blue-900 text-xs uppercase">${d}</span>
+            </div>`;
+        });
+    }
+
+    function openSlots(d) {
+        showSection('listPage');
+        document.getElementById('lTitle').innerText = d;
+        document.getElementById('lSub').innerText = `${shift} | ${selDate}`;
+        let h = "";
+        const limit = (d === 'OPD') ? 10 : 6;
+        for(let i=1; i<=limit; i++) {
+            let key = `${selDate}_${d}_${i}_${shift}`;
+            let val = appData[key] || "---";
+            const handler = role === 'admin' ? `onclick="openRangeModal('${key}')"` : "";
+            const style = role === 'admin' ? "cursor-pointer text-blue-600 underline font-black" : "font-black text-gray-800";
+            h += `<div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center border-l-4 border-blue-600">
+                <span class="text-[10px] font-bold text-gray-400 uppercase">Slot ${i}</span>
+                <span ${handler} class="${style}">${val}</span>
+            </div>`;
+        }
+        document.getElementById('lBody').innerHTML = h;
+    }
+
+    function loadFullDutyRecords() {
+        const cont = document.getElementById('fullDutyCont');
+        const sDate = document.getElementById('fStart').value;
+        const eDate = document.getElementById('fEnd').value;
+        cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center text-blue-300'>Filtering...</td></tr>";
+        let rows = [];
+        Object.keys(appData).forEach(k => {
+            const p = k.split('_');
+            if(p.length === 4 && appData[k] !== "---") {
+                const dDate = p[0];
+                if ((!sDate || dDate >= sDate) && (!eDate || dDate <= eDate)) {
+                    rows.push({ d: p[0], dep: p[1], sl: p[2], sh: p[3], n: appData[k] });
+                }
+            }
+        });
+        rows.sort((a,b) => new Date(b.d) - new Date(a.d));
+        cont.innerHTML = "";
+        if(rows.length === 0) {
+            cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center text-gray-400'>No Records Found</td></tr>";
+            return;
+        }
+        rows.forEach((r, i) => {
+            const bg = i % 2 === 0 ? 'bg-white' : 'bg-blue-50/30';
+            cont.innerHTML += `<tr class="${bg} border-b border-gray-100">
+                <td class="p-3 text-blue-600 whitespace-nowrap">${r.d}</td>
+                <td class="p-3 font-black text-gray-900 uppercase">${r.n}</td>
+                <td class="p-3 text-gray-500">${r.dep} <span class="text-[8px] block">Slot ${r.sl}</span></td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded text-[9px] ${r.sh==='Day'?'bg-orange-100 text-orange-600':'bg-indigo-100 text-indigo-600'}">${r.sh}</span></td>
+            </tr>`;
+        });
+    }
+
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("SANSKARDHAM HOSPITAL - DUTY LIST", 14, 15);
+        const data = [];
+        document.querySelectorAll("#fullDutyCont tr").forEach(row => {
+            const cols = row.querySelectorAll("td");
+            if(cols.length > 0) data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText.replace("\n", " "), cols[3].innerText]);
+        });
+        doc.autoTable({ startY: 25, head: [['Date', 'Staff Name', 'Department', 'Shift']], body: data });
+        doc.save(`Duty_Report.pdf`);
+    }
+
+    function loadStaffRecords() {
+        const cont = document.getElementById('staffListCont');
+        cont.innerHTML = "<tr><td colspan='4' class='p-5 text-center'>Loading...</td></tr>";
+        profDB.once('value', (s) => {
+            cont.innerHTML = "";
+            const data = s.val();
+            if(!data) return;
+            let i = 0;
+            Object.values(data).forEach(x => {
+                const bg = i % 2 === 0 ? 'bg-white' : 'bg-blue-50/20';
+                cont.innerHTML += `<tr class="${bg} border-b">
+                    <td class="p-3 text-gray-400">${x.id || '---'}</td>
+                    <td class="p-3 font-black text-blue-900 uppercase">${x.name}</td>
+                    <td class="p-3 font-bold">${x.mob || '---'}</td>
+                    <td class="p-3 text-gray-500">${x.exp || '---'}</td>
+                </tr>`;
+                i++;
+            });
+        });
+    }
+
+    function filterStaffTable() {
+        let input = document.getElementById("staffSearch").value.toUpperCase();
+        let rows = document.getElementById("staffListCont").getElementsByTagName("tr");
+        for (let i = 0; i < rows.length; i++) {
+            let txtValue = rows[i].textContent || rows[i].innerText;
+            rows[i].style.display = txtValue.toUpperCase().indexOf(input) > -1 ? "" : "none";
+        }
+    }
+
+    function downloadStaffPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("SANSKARDHAM HOSPITAL - STAFF RECORDS", 14, 15);
+        const data = [];
+        document.querySelectorAll("#staffListCont tr").forEach(row => {
+            if(row.style.display !== "none") {
+                const cols = row.querySelectorAll("td");
+                data.push([cols[0].innerText, cols[1].innerText, cols[2].innerText, cols[3].innerText]);
+            }
+        });
+        doc.autoTable({ startY: 28, head: [['ID', 'Staff Name', 'Mobile', 'Experience']], body: data });
+        doc.save("Staff_Records.pdf");
+    }
+
+    function openRangeModal(key) {
+        editKey = key;
+        document.getElementById('rStaff').value = (appData[key] === "---") ? "" : appData[key];
+        document.getElementById('rStart').value = selDate;
+        document.getElementById('rEnd').value = selDate;
+        document.getElementById('staffSuggestions').classList.add('hidden');
+        document.getElementById('rangeModal').classList.remove('hidden');
+    }
+
+    function closeModal() { 
+        document.getElementById('rangeModal').classList.add('hidden'); 
+        document.getElementById('staffSuggestions').classList.add('hidden');
+    }
+
+    function saveRangeDuty() {
+        const name = document.getElementById('rStaff').value.trim() || "---";
+        const start = new Date(document.getElementById('rStart').value);
+        const end = new Date(document.getElementById('rEnd').value);
+        if(!start || !end) return alert("તારીખ પસંદ કરો");
+        const parts = editKey.split('_'); 
+        let updates = {};
+        let temp = new Date(start);
+        while(temp <= end) {
+            let dStr = temp.toISOString().split('T')[0];
+            let k = `${dStr}_${parts[1]}_${parts[2]}_${parts[3]}`;
+            updates[k] = name;
+            temp.setDate(temp.getDate() + 1);
+        }
+        db.update(updates).then(() => { closeModal(); openSlots(parts[1]); });
+    }
+
+    function toggleShift() {
+        shift = (shift === "Day") ? "Night" : "Day";
+        document.getElementById('shiftIco').innerText = (shift === "Day") ? "☀️" : "🌙";
+        refreshData();
+    }
+
+    function refreshData() {
+        selDate = document.getElementById('dateInput').value;
+        if(!document.getElementById('listPage').classList.contains('hidden')) openSlots(document.getElementById('lTitle').innerText);
+    }
+
+    function searchName() {
+        const q = document.getElementById('searchBar').value.toLowerCase();
+        let foundDep = "";
+        if(!q) { document.getElementById('searchRes').classList.add('hidden'); return; }
+        for(let k in appData) {
+            if(k.startsWith(selDate) && k.endsWith(shift) && appData[k].toLowerCase().includes(q)) { foundDep = k.split('_')[1]; break; }
+        }
+        const resDiv = document.getElementById('searchRes');
+        resDiv.classList.remove('hidden');
+        resDiv.innerHTML = foundDep ? `✅ તમારી ડ્યુટી ${foundDep} માં છે.` : `⚠️ નામ મળ્યું નથી.`;
+        resDiv.className = `p-4 rounded-2xl font-bold text-center ${foundDep?'bg-green-50 text-green-700':'bg-red-50 text-red-700'}`;
+    }
+
+    function saveProfile() {
+        const name = document.getElementById('pName').value.trim();
+        const id = document.getElementById('pID').value.trim();
+        if(!name || !id) return alert("નામ અને ID જરૂરી છે!");
+        profDB.push({ name, id, mob: document.getElementById('pMobile').value, exp: document.getElementById('pExp').value });
+        alert("પ્રોફાઇલ સેવ થઈ ગઈ!");
+        showSection('dutySection');
+    }
+</script>
+</body>
+</html>
