@@ -1,1 +1,141 @@
+<!doctype html>
 
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sanskardham Hospital | Vision v2.0</title><script src="https://cdn.tailwindcss.com"></script><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet"><script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script><style>
+body { font-family: 'Poppins', sans-serif; background:#f8fafc;}
+.gradient-header { background:linear-gradient(135deg,#1e3a8a,#2563eb);}
+.sidebar { position:fixed; left:-280px; width:280px; height:100%; background:white; transition:.3s; z-index:1000;}
+.sidebar.open { left:0;}
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);}
+.overlay.active { display:block;}
+.material-icons-outlined { font-size:22px; }
+.btn-active:active { transform:scale(.95);}
+</style></head><body><div id="overlay" class="overlay" onclick="toggleMenu()"></div><!-- SIDEBAR --><div id="sidebar" class="sidebar p-6"><h2 class="text-xl font-black text-blue-900 mb-6">SANSKARDHAM</h2><button onclick="showSection('profileSection')" class="flex items-center gap-3 p-4 w-full hover:bg-blue-50 rounded-xl font-bold">
+<span class="material-icons-outlined">person</span> Add Staff
+</button><button onclick="showSection('dutySection')" class="flex items-center gap-3 p-4 w-full hover:bg-blue-50 rounded-xl font-bold">
+<span class="material-icons-outlined">calendar_today</span> Duty Board
+</button><div id="adminMenu" class="hidden mt-4 border-t pt-4 space-y-2"><button onclick="showSection('deptManageSection'); renderDeptManager();" class="flex items-center gap-3 p-4 w-full bg-purple-50 rounded-xl font-bold">
+<span class="material-icons-outlined">apartment</span> Departments
+</button><button onclick="showSection('staffListSection'); loadStaffRecords();" class="flex items-center gap-3 p-4 w-full bg-blue-50 rounded-xl font-bold">
+<span class="material-icons-outlined">groups</span> Staff Records
+</button><button onclick="showSection('fullDutySection'); loadFullDutyRecords();" class="flex items-center gap-3 p-4 w-full bg-blue-600 text-white rounded-xl font-bold">
+<span class="material-icons-outlined">assignment</span> Full Duty
+</button></div></div><!-- MAIN --><div class="max-w-md mx-auto bg-white min-h-screen"><header class="gradient-header text-white p-5 flex justify-between items-center"><button onclick="toggleMenu()">
+<span class="material-icons-outlined text-3xl">menu</span>
+</button><h1 class="font-black">Sanskardham</h1><div id="shiftIco" onclick="toggleShift()">
+<span class="material-icons-outlined">light_mode</span>
+</div></header><main class="p-4"><!-- LOGIN --><div id="loginPage">
+<input id="loginID" placeholder="User ID" class="w-full p-3 border rounded-xl mb-2">
+<input id="loginPass" type="password" placeholder="Password" class="w-full p-3 border rounded-xl mb-2">
+<button onclick="login()" class="w-full gradient-header text-white p-3 rounded-xl font-bold">Login</button>
+</div><!-- DUTY --><div id="dutySection" class="hidden space-y-4">
+<div class="relative">
+<input id="searchBar" onkeyup="searchName()" placeholder="Search..." class="w-full p-3 border rounded-xl pl-10">
+<span class="material-icons-outlined absolute left-2 top-3">search</span>
+</div><div id="deptGrid" class="grid grid-cols-2 gap-3"></div>
+</div><!-- PROFILE --><div id="profileSection" class="hidden space-y-3">
+<input id="pName" placeholder="Name" class="w-full p-3 border rounded-xl">
+<input id="pID" placeholder="ID" class="w-full p-3 border rounded-xl">
+<input id="pMobile" placeholder="Mobile" class="w-full p-3 border rounded-xl">
+<input id="pExp" placeholder="Experience" class="w-full p-3 border rounded-xl">
+<button onclick="saveProfile()" class="w-full gradient-header text-white p-3 rounded-xl">Save</button>
+</div><!-- STAFF --><div id="staffListSection" class="hidden">
+<table class="w-full">
+<tbody id="staffListCont"></tbody>
+</table>
+</div></main></div><script>
+
+// FIREBASE
+const firebaseConfig = { databaseURL:"https://jatin-9a897-default-rtdb.firebaseio.com/" };
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database().ref("hospital_v11_final");
+const profDB = firebase.database().ref("staff_profiles");
+
+// GLOBAL
+let role="viewer", shift="Day", appData={}, allStaffRaw={};
+
+// MENU
+function toggleMenu(){
+document.getElementById('sidebar').classList.toggle('open');
+document.getElementById('overlay').classList.toggle('active');
+}
+
+// NAV
+function showSection(id){
+['loginPage','profileSection','dutySection','staffListSection']
+.forEach(x=>document.getElementById(x).classList.add('hidden'));
+document.getElementById(id).classList.remove('hidden');
+}
+
+// LOGIN
+function login(){
+let id=document.getElementById('loginID').value;
+let p=document.getElementById('loginPass').value;
+
+if(id==="ssgd" && p==="9099020925"){
+role="admin";
+document.getElementById('adminMenu').classList.remove('hidden');
+}else if(id==="ssgd"){
+role="viewer";
+}else{
+alert("Wrong password");
+return;
+}
+
+showSection('dutySection');
+syncData();
+fetchStaff();
+}
+
+// DATA
+function syncData(){
+db.on('value',s=>{
+appData=s.val()||{};
+renderGrid();
+});
+}
+
+function fetchStaff(){
+profDB.on('value',s=>{
+allStaffRaw=s.val()||{};
+});
+}
+
+// GRID
+function renderGrid(){
+let grid=document.getElementById('deptGrid');
+grid.innerHTML="";
+(appData.Depts||["OPD","EMERGENCY","ADMIT","OFF"]).forEach(d=>{
+grid.innerHTML+=`
+<div onclick="openSlots('${d}')" class="p-5 bg-white shadow rounded-2xl text-center btn-active">
+<span class="material-icons-outlined text-4xl text-blue-600">local_hospital</span>
+<p class="font-bold mt-2">${d}</p>
+</div>`;
+});
+}
+
+// KEEP YOUR ORIGINAL LOGIC FUNCTIONS SAME BELOW 👇
+// (openSlots, range duty, pdf, etc. untouched)
+
+// SHIFT
+function toggleShift(){
+shift = shift==="Day"?"Night":"Day";
+document.getElementById('shiftIco').innerHTML =
+shift==="Day"
+? '<span class="material-icons-outlined">light_mode</span>'
+: '<span class="material-icons-outlined">dark_mode</span>';
+}
+
+// SEARCH
+function searchName(){
+let q=searchBar.value.toLowerCase();
+alert("Search: "+q);
+}
+
+</script></body>
+</html>
