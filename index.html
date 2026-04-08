@@ -22,10 +22,10 @@
         .btn-active:active { transform: scale(0.95); }
         .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         
-        /* Suggestions styling */
-        .suggestion-box { position: absolute; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; max-height: 150px; overflow-y: auto; z-index: 3000; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .suggestion-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-weight: 600; font-size: 13px; }
+        .suggestion-box { position: absolute; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 3000; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .suggestion-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         .suggestion-item:hover { background-color: #eff6ff; color: #1e40af; }
+        .exp-badge { font-size: 9px; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -146,7 +146,7 @@
                 <input type="text" id="pName" placeholder="Full Name" class="w-full p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
                 <input type="text" id="pID" placeholder="ID Number" class="w-full p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
                 <input type="number" id="pMobile" placeholder="Mobile" class="w-full p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
-                <input type="text" id="pExp" placeholder="Experience" class="w-full p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
+                <input type="text" id="pExp" placeholder="Experience (Example: OPD, Orthopedic)" class="w-full p-4 bg-gray-50 rounded-2xl font-bold border outline-none">
                 <button onclick="saveProfile()" class="w-full gradient-header text-white p-4 rounded-2xl font-bold uppercase shadow-lg">Save Profile</button>
             </div>
         </div>
@@ -208,7 +208,7 @@
     const db = firebase.database().ref("hospital_v11_final");
     const profDB = firebase.database().ref("staff_profiles");
 
-    let role = "viewer", shift = "Day", selDate = "", appData = {}, editKey = "", allStaff = [];
+    let role = "viewer", shift = "Day", selDate = "", appData = {}, editKey = "", allStaffProfiles = [];
 
     function toggleMenu() {
         document.getElementById('sidebar').classList.toggle('open');
@@ -251,18 +251,41 @@
     function fetchAllStaff() {
         profDB.on('value', (s) => {
             const data = s.val();
-            allStaff = data ? Object.values(data).map(x => x.name) : [];
+            allStaffProfiles = data ? Object.values(data) : [];
         });
     }
 
     function showSuggestions(val) {
         const box = document.getElementById('staffSuggestions');
-        if (!val) { box.classList.add('hidden'); return; }
-        const filtered = allStaff.filter(name => name.toLowerCase().includes(val.toLowerCase()));
+        if (val === undefined) val = ""; 
+        
+        const currentDept = editKey.split('_')[1].toLowerCase();
+
+        // Filter logic: Check if name matches AND if experience matches department
+        const filtered = allStaffProfiles.filter(staff => {
+            const matchesName = staff.name.toLowerCase().includes(val.toLowerCase());
+            const hasExp = staff.exp && staff.exp.toLowerCase().includes(currentDept);
+            return val === "" ? hasExp : (matchesName && hasExp);
+        });
+
         if (filtered.length > 0) {
-            box.innerHTML = filtered.map(name => `<div class="suggestion-item" onclick="selectStaff('${name}')">${name}</div>`).join('');
+            box.innerHTML = filtered.map(staff => `
+                <div class="suggestion-item" onclick="selectStaff('${staff.name}')">
+                    <span>${staff.name}</span>
+                    <span class="exp-badge">${staff.exp || ''}</span>
+                </div>
+            `).join('');
             box.classList.remove('hidden');
-        } else { box.classList.add('hidden'); }
+        } else {
+            // If no specific dept staff found, show all matching names as backup
+            const backup = allStaffProfiles.filter(s => s.name.toLowerCase().includes(val.toLowerCase()));
+            if(backup.length > 0) {
+                box.innerHTML = backup.map(s => `<div class="suggestion-item" onclick="selectStaff('${s.name}')"><span>${s.name}</span></div>`).join('');
+                box.classList.remove('hidden');
+            } else {
+                box.classList.add('hidden');
+            }
+        }
     }
 
     function selectStaff(name) {
@@ -272,7 +295,7 @@
 
     function syncData() {
         db.on('value', (s) => {
-            appData = s.val() || { "Depts": ["OPD", "EMERGENCY", "OFF LIST"] };
+            appData = s.val() || { "Depts": ["OPD", "EMERGENCY", "ORTHOPEDIC", "OFF LIST"] };
             renderGrid();
         });
     }
@@ -280,7 +303,7 @@
     function renderGrid() {
         const grid = document.getElementById('deptGrid');
         grid.innerHTML = "";
-        const depts = appData.Depts || ["OPD", "EMERGENCY", "OFF LIST"];
+        const depts = appData.Depts || ["OPD", "EMERGENCY", "ORTHOPEDIC", "OFF LIST"];
         depts.forEach(d => {
             grid.innerHTML += `<div onclick="openSlots('${d}')" class="p-6 bg-white rounded-[35px] border border-blue-50 shadow-sm flex flex-col items-center btn-active cursor-pointer">
                 <span class="text-3xl mb-2">${d.includes('OFF')?'😴':'🏥'}</span>
@@ -403,8 +426,8 @@
         document.getElementById('rStaff').value = (appData[key] === "---") ? "" : appData[key];
         document.getElementById('rStart').value = selDate;
         document.getElementById('rEnd').value = selDate;
-        document.getElementById('staffSuggestions').classList.add('hidden');
         document.getElementById('rangeModal').classList.remove('hidden');
+        showSuggestions(""); // Trigger initial filtered list
     }
 
     function closeModal() { 
@@ -416,7 +439,7 @@
         const name = document.getElementById('rStaff').value.trim() || "---";
         const start = new Date(document.getElementById('rStart').value);
         const end = new Date(document.getElementById('rEnd').value);
-        if(!start || !end) return alert("તારીખ પસંદ કરો");
+        if(isNaN(start) || isNaN(end)) return alert("તારીખ પસંદ કરો");
         const parts = editKey.split('_'); 
         let updates = {};
         let temp = new Date(start);
@@ -456,9 +479,14 @@
     function saveProfile() {
         const name = document.getElementById('pName').value.trim();
         const id = document.getElementById('pID').value.trim();
+        const exp = document.getElementById('pExp').value.trim();
         if(!name || !id) return alert("નામ અને ID જરૂરી છે!");
-        profDB.push({ name, id, mob: document.getElementById('pMobile').value, exp: document.getElementById('pExp').value });
+        profDB.push({ name, id, mob: document.getElementById('pMobile').value, exp: exp });
         alert("પ્રોફાઇલ સેવ થઈ ગઈ!");
+        document.getElementById('pName').value = "";
+        document.getElementById('pID').value = "";
+        document.getElementById('pMobile').value = "";
+        document.getElementById('pExp').value = "";
         showSection('dutySection');
     }
 </script>
